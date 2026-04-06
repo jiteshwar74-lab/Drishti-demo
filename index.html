@@ -24,7 +24,7 @@ repeating-linear-gradient(0deg,transparent 0,transparent 2px,rgba(0,255,100,0.01
 .app{display:flex;flex-direction:column;height:100vh;}
 
 /* ── HEADER ── */
-.hdr{background:linear-gradient(90deg,var(–p1)0%,#061210 100%);border-bottom:1px solid var(–bdr2);
+.hdr{background:linear-gradient(90deg,var(–p1) 0%,#061210 100%);border-bottom:1px solid var(–bdr2);
 padding:0 14px;height:52px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;position:relative;}
 .hdr::after{content:’’;position:absolute;bottom:0;left:0;right:0;height:1px;
 background:linear-gradient(90deg,transparent,var(–g),transparent);opacity:0.3;}
@@ -64,9 +64,6 @@ pointer-events:none;z-index:10;display:none;text-shadow:0 1px 4px rgba(0,0,0,0.9
 .hud.bl{bottom:12px;left:38px;color:rgba(0,255,136,0.85);}
 .hud.br{bottom:12px;right:38px;text-align:right;color:rgba(0,255,136,0.85);}
 
-/* Zone overlay */
-.zone-overlay{position:absolute;inset:0;pointer-events:none;z-index:5;}
-
 /* Threat banner */
 .thr-ban{position:absolute;top:42%;left:50%;transform:translate(-50%,-50%);
 font-family:‘Orbitron’,monospace;font-weight:900;letter-spacing:3px;
@@ -80,6 +77,13 @@ background:rgba(255,23,68,0.1);text-shadow:0 0 14px var(–r);}
 background:rgba(255,145,0,0.08);text-shadow:0 0 14px var(–o);}
 .thr-ban.motion{font-size:clamp(11px,2.2vw,15px);color:var(–b);border-color:var(–b);
 background:rgba(0,176,255,0.08);text-shadow:0 0 12px var(–b);}
+
+/* ── ARMED CONFIRM RING ── */
+@keyframes armRing{
+0%{opacity:0.3;transform:translate(-50%,-50%) scale(0.85);}
+50%{opacity:0.9;transform:translate(-50%,-50%) scale(1.05);}
+100%{opacity:0.3;transform:translate(-50%,-50%) scale(0.85);}
+}
 
 /* Idle */
 .idle{position:absolute;inset:0;display:flex;flex-direction:column;
@@ -142,6 +146,14 @@ background:var(–dim2);line-height:1.9;color:var(–dim);position:relative;}
 .track-status.threat{color:var(–r);}
 .track-status.zone{color:var(–o);}
 .track-status.clear{color:var(–dim);}
+.track-status.confirm{color:var(–y);}
+
+/* ── ARMED CONFIRM BADGE ── */
+.arm-confirm{background:var(–dim2);border:1px solid var(–bdr2);
+padding:5px 10px;margin-top:4px;font-family:‘Share Tech Mono’,monospace;font-size:9px;
+color:var(–y);letter-spacing:1px;display:flex;align-items:center;gap:6px;}
+.arm-bar-wrap{flex:1;height:3px;background:var(–bdr);overflow:hidden;}
+.arm-bar{height:100%;background:var(–y);transition:width 0.2s;box-shadow:0 0 4px var(–y);}
 
 /* Alert log */
 .alert-log{max-height:110px;overflow-y:auto;}
@@ -315,6 +327,19 @@ letter-spacing:1px;display:flex;align-items:center;gap:5px;}
   </div>
 </div>
 
+<!-- ARMED CONFIRMATION PROGRESS (shown when confirming) -->
+<div class="pnl" id="armConfirmPnl" style="display:none;">
+  <div class="pnl-h">THREAT CONFIRMATION</div>
+  <div class="arm-confirm">
+    <span id="armConfirmLbl">CONFIRMING...</span>
+    <div class="arm-bar-wrap"><div class="arm-bar" id="armBar" style="width:0%"></div></div>
+    <span id="armConfirmPct" style="font-size:8px;color:var(--y);width:26px;text-align:right;">0%</span>
+  </div>
+  <div style="font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--dim);margin-top:4px;letter-spacing:1px;">
+    REQUIRES <span style="color:var(--y)" id="armFramesNeeded">--</span> CONSECUTIVE FRAMES
+  </div>
+</div>
+
 <div class="pnl grow" style="max-height:200px;">
   <div class="pnl-h">ACTIVE TRACKS</div>
   <div class="track-list" id="trackList">
@@ -334,11 +359,16 @@ letter-spacing:1px;display:flex;align-items:center;gap:5px;}
     <input type="range" id="trailSl" min="5" max="40" value="20" oninput="setTrail(this.value)">
     <span id="trailV">20</span>
   </div>
+  <div class="ctrl-row">
+    <label>ARM FRAMES</label>
+    <input type="range" id="armSl" min="3" max="15" value="6" oninput="setArmFrames(this.value)">
+    <span id="armV">6</span>
+  </div>
   <div class="zone-msg" id="zoneMsg">◉ TAP FEED TO SET ZONE CORNERS · TAP AGAIN TO FINISH</div>
   <div class="btn-grid">
     <button class="cb o" id="zoneBtn" onclick="toggleZoneDraw()">⬚ DRAW<br>ZONE</button>
     <button class="cb r" onclick="clearZone()">✕ CLEAR<br>ZONE</button>
-    <button class="cb b" onclick="toggleTrails()">⟳ TRAILS<br>ON</button>
+    <button class="cb b" id="trailBtn" onclick="toggleTrails()">⟳ TRAILS<br>ON</button>
     <button class="cb d" onclick="doReset()">↺ RESET<br>ALL</button>
   </div>
 </div>
@@ -368,7 +398,7 @@ letter-spacing:1px;display:flex;align-items:center;gap:5px;}
   </div>
 </div>
 
-</div>
+</div><!-- /app -->
 
 <script>
 'use strict';
@@ -385,6 +415,7 @@ const vid=$('vid'), ov=$('ov'), ctx=ov.getContext('2d');
 // ── STATE ─────────────────────────────────────────
 let model=null, running=false;
 let threshold=0.55, trailLen=20, showTrails=true;
+let ARM_FRAMES_REQUIRED=6;   // frames to confirm armed — configurable
 let frameIdx=0, frameCount=0, fpsTimer=Date.now(), fps=0;
 let lastPreds=[], prevFrame=null;
 let totalAlerts=0, zoneAlerts=0;
@@ -392,16 +423,15 @@ let bannerTimer=null;
 const BANNER_HOLD=3000;
 
 // ── ZONE STATE ────────────────────────────────────
-let zonePoints=[];       // up to 4 corners drawn by user
+let zonePoints=[];
 let zoneDrawMode=false;
 let zoneActive=false;
 
-// ── TRACKER STATE (Kalman + IoU) ──────────────────
-// Each track: {id, cls, bbox, kalman, trail, age, missed, color, zoneHit}
+// ── TRACKER STATE ─────────────────────────────────
 let tracks=[];
 let nextId=1;
-const MAX_MISSED=8;      // frames before track killed
-const MIN_IOU=0.25;      // min IoU to associate detection to track
+const MAX_MISSED=8;
+const MIN_IOU=0.25;
 const TRAIL_COLORS=['#00b0ff','#00ff88','#ffd600','#ff9100','#ff1744','#b388ff','#00e5ff','#69f0ae'];
 
 // ── CLOCK ─────────────────────────────────────────
@@ -413,7 +443,7 @@ function tick(){
 }
 setInterval(tick,1000); tick();
 
-// ── ACTIVATE ─────────────────────────────────────
+// ── ACTIVATE ──────────────────────────────────────
 $('actBtn').addEventListener('click', activate);
 
 async function activate(){
@@ -443,7 +473,6 @@ async function activate(){
     document.querySelectorAll('.brk,.hud').forEach(e=>e.style.display='block');
     $('dCam').className='dot on';
 
-    // Zone click handler
     ov.parentElement.addEventListener('click', handleZoneClick);
 
     try{
@@ -456,6 +485,7 @@ async function activate(){
       $('bModel').textContent='MODEL: COCO-SSD + MTT';
       sysLog('AI engine loaded — lite_mobilenet_v2','ok');
       sysLog('Multi-target tracker initialised — Kalman+IoU','ok');
+      sysLog(`Armed confirmation: ${ARM_FRAMES_REQUIRED} consecutive frames required`,'ok');
       sysLog('Post: Ganasok · Sector Alpha · 18,000 ft','sys');
     }catch(e){
       setLoad('MODEL FAILED: '+e.message,100); return;
@@ -475,223 +505,186 @@ async function activate(){
 function setLoad(m,p){$('loadMsg').textContent=m;$('loadFill').style.width=p+'%';}
 
 // ══════════════════════════════════════════════════
-// KALMAN FILTER — lightweight 1D per axis
-// Tracks x,y,w,h independently
-// State: [position, velocity]
+// KALMAN FILTER
 // ══════════════════════════════════════════════════
 class KalmanBox{
   constructor(bbox){
-    // bbox = [x,y,w,h]
-    // State for each dim: [pos, vel]
-    this.x  =[bbox[0],0];
-    this.y  =[bbox[1],0];
-    this.w  =[bbox[2],0];
-    this.h  =[bbox[3],0];
-    // Noise params
-    this.pNoise=0.1;  // process noise
-    this.mNoise=3.0;  // measurement noise
-    // Covariances
-    this.Px=[1,0,0,10]; // [p00,p01,p10,p11]
-    this.Py=[1,0,0,10];
-    this.Pw=[1,0,0,10];
-    this.Ph=[1,0,0,10];
+    this.x=[bbox[0],0]; this.y=[bbox[1],0];
+    this.w=[bbox[2],0]; this.h=[bbox[3],0];
+    this.pNoise=0.1; this.mNoise=3.0;
+    this.Px=[1,0,0,10]; this.Py=[1,0,0,10];
+    this.Pw=[1,0,0,10]; this.Ph=[1,0,0,10];
   }
-  // Predict next state
   predict(){
-    this._predict1D(this.x, this.Px);
-    this._predict1D(this.y, this.Py);
-    this._predict1D(this.w, this.Pw);
-    this._predict1D(this.h, this.Ph);
-    return [this.x[0], this.y[0], this.w[0], this.h[0]];
+    this._p1D(this.x,this.Px); this._p1D(this.y,this.Py);
+    this._p1D(this.w,this.Pw); this._p1D(this.h,this.Ph);
+    return[this.x[0],this.y[0],this.w[0],this.h[0]];
   }
-  // Update with measurement
   update(bbox){
-    this._update1D(this.x, this.Px, bbox[0]);
-    this._update1D(this.y, this.Py, bbox[1]);
-    this._update1D(this.w, this.Pw, bbox[2]);
-    this._update1D(this.h, this.Ph, bbox[3]);
-    return [this.x[0], this.y[0], this.w[0], this.h[0]];
+    this._u1D(this.x,this.Px,bbox[0]); this._u1D(this.y,this.Py,bbox[1]);
+    this._u1D(this.w,this.Pw,bbox[2]); this._u1D(this.h,this.Ph,bbox[3]);
+    return[this.x[0],this.y[0],this.w[0],this.h[0]];
   }
-  _predict1D(s, P){
-    // State transition: pos += vel
-    s[0] = s[0] + s[1];
-    // Covariance predict: P = F*P*F' + Q
+  _p1D(s,P){
+    s[0]+=s[1];
     const p00=P[0]+P[1]+P[2]+P[3]+this.pNoise;
-    const p01=P[1]+P[3];
-    const p10=P[2]+P[3];
-    const p11=P[3]+this.pNoise;
-    P[0]=p00; P[1]=p01; P[2]=p10; P[3]=p11;
+    const p01=P[1]+P[3], p10=P[2]+P[3], p11=P[3]+this.pNoise;
+    P[0]=p00;P[1]=p01;P[2]=p10;P[3]=p11;
   }
-  _update1D(s, P, z){
-    // Kalman gain: K = P*H' / (H*P*H' + R)
-    const S = P[0] + this.mNoise;
-    const K0 = P[0] / S;
-    const K1 = P[2] / S;
-    // Update state
-    const innov = z - s[0];
-    s[0] = s[0] + K0 * innov;
-    s[1] = s[1] + K1 * innov;
-    // Update covariance: P = (I-K*H)*P
-    P[0] = (1-K0)*P[0];
-    P[1] = (1-K0)*P[1];
-    P[2] = P[2] - K1*P[0];
-    P[3] = P[3] - K1*P[1];
+  _u1D(s,P,z){
+    const S=P[0]+this.mNoise, K0=P[0]/S, K1=P[2]/S;
+    const inn=z-s[0]; s[0]+=K0*inn; s[1]+=K1*inn;
+    P[0]=(1-K0)*P[0]; P[1]=(1-K0)*P[1];
+    P[2]=P[2]-K1*P[0]; P[3]=P[3]-K1*P[1];
   }
 }
 
-// ══════════════════════════════════════════════════
-// IoU — Intersection over Union
-// Standard metric for bbox overlap
-// ══════════════════════════════════════════════════
-function iou(a, b){
-  // a,b = [x,y,w,h]
-  const ax1=a[0], ay1=a[1], ax2=a[0]+a[2], ay2=a[1]+a[3];
-  const bx1=b[0], by1=b[1], bx2=b[0]+b[2], by2=b[1]+b[3];
-  const ix1=Math.max(ax1,bx1), iy1=Math.max(ay1,by1);
-  const ix2=Math.min(ax2,bx2), iy2=Math.min(ay2,by2);
+// ── IoU ───────────────────────────────────────────
+function iou(a,b){
+  const ax2=a[0]+a[2],ay2=a[1]+a[3],bx2=b[0]+b[2],by2=b[1]+b[3];
+  const ix1=Math.max(a[0],b[0]),iy1=Math.max(a[1],b[1]);
+  const ix2=Math.min(ax2,bx2),iy2=Math.min(ay2,by2);
   if(ix2<ix1||iy2<iy1) return 0;
   const inter=(ix2-ix1)*(iy2-iy1);
-  const ua=(ax2-ax1)*(ay2-ay1);
-  const ub=(bx2-bx1)*(by2-by1);
-  return inter/(ua+ub-inter);
+  return inter/(a[2]*a[3]+b[2]*b[3]-inter);
 }
 
 // ══════════════════════════════════════════════════
-// MULTI-TARGET TRACKER
-// Hungarian-style greedy IoU matching
+// ARMED PERSON DETECTION — v2 FIXED
+//
+// ROOT CAUSE OF BUG (confirmed from trial photos):
+//   Old code used topFrac > 0.45 to reject leg-only
+//   detections. But at camera-down angle or partial
+//   body shots the box starts at y~0.35 (passes check)
+//   AND boots/legs spread wide (ratio passes too).
+//   Result: close-range leg/boot shot = ARMED flag.
+//
+// FIX — Three-gate system:
+//   Gate 1: BODY COVERAGE — bbox must cover at least
+//           35% of frame height (full/upper body present)
+//   Gate 2: HEAD ZONE — top of bbox must be in upper
+//           60% of frame (head must be visible region)
+//   Gate 3: ASPECT RATIO — width/height 0.3–0.85
+//           (tall narrow box = full body, not wide leg shot)
+//
+// PLUS: Frame counter — isArmedCandidate() just flags
+//       a candidate. armedConfirmedFrames must reach
+//       ARM_FRAMES_REQUIRED before ENEMY ATTACK fires.
 // ══════════════════════════════════════════════════
+function isArmedCandidate(bbox, ovW, ovH){
+  const [x, y, w, h] = bbox;
+
+  // Gate 1: Must cover significant height — not just legs/feet
+  // Legs-only at close range cover ~30-40% height but start mid-frame
+  // Full body or upper body covers 35%+ AND starts near top
+  const heightFrac = h / ovH;          // fraction of frame height
+  if(heightFrac < 0.30) return false;  // too small — distant, skip
+
+  // Gate 2: The TOP of the bounding box must be in upper 55% of frame
+  // This is the key fix — if box top is below 55%, it's legs/feet only
+  const topFrac = y / ovH;
+  if(topFrac > 0.55) return false;     // box starts too low = no head/torso
+
+  // Gate 3: Aspect ratio — full body is taller than wide
+  // Legs/boots pointing at camera are WIDE relative to height
+  // A proper upright person: ratio typically 0.25–0.75
+  const ratio = w / h;
+  if(ratio > 0.80) return false;       // too wide — lateral/feet view
+  if(ratio < 0.20) return false;       // too narrow — edge/partial only
+
+  // Gate 4: The combined box centre must be in upper 70% of frame
+  // Prevents centroid of a boot close-up from being flagged
+  const cy = (y + h/2) / ovH;
+  if(cy > 0.72) return false;          // centroid too low — feet region
+
+  return true;
+}
+
+// ── MULTI-TARGET TRACKER ──────────────────────────
 function updateTracker(detections){
-  // Step 1: Predict all existing tracks
-  tracks.forEach(t=>{
-    t.predicted = t.kalman.predict();
-  });
+  tracks.forEach(t=>{ t.predicted=t.kalman.predict(); });
 
-  // Step 2: Build IoU cost matrix and greedily match
-  const matched = new Set();
-  const usedDet = new Set();
-
-  // Sort by IoU descending — greedy best match first
+  const matched=new Set(), usedDet=new Set();
   const pairs=[];
   tracks.forEach((t,ti)=>{
     detections.forEach((d,di)=>{
-      const score=iou(t.predicted, d.bbox);
+      const score=iou(t.predicted,d.bbox);
       if(score>=MIN_IOU) pairs.push({ti,di,score});
     });
   });
   pairs.sort((a,b)=>b.score-a.score);
-
   pairs.forEach(({ti,di})=>{
     if(!matched.has(ti)&&!usedDet.has(di)){
       matched.add(ti); usedDet.add(di);
       const t=tracks[ti], d=detections[di];
       t.bbox=t.kalman.update(d.bbox);
-      t.cls=d.cls;
-      t.conf=d.conf;
-      t.missed=0;
-      t.age++;
-      // Add to trail
-      const cx=t.bbox[0]+t.bbox[2]/2;
-      const cy=t.bbox[1]+t.bbox[3]/2;
+      t.cls=d.cls; t.conf=d.conf;
+      t.missed=0; t.age++;
+      const cx=t.bbox[0]+t.bbox[2]/2, cy=t.bbox[1]+t.bbox[3]/2;
       t.trail.push({x:cx,y:cy});
       if(t.trail.length>trailLen) t.trail.shift();
     }
   });
-
-  // Step 3: Increment missed for unmatched tracks
   tracks.forEach((t,ti)=>{
     if(!matched.has(ti)){
       t.missed++;
-      t.bbox=t.predicted; // use prediction
-      // Still add predicted position to trail
-      const cx=t.bbox[0]+t.bbox[2]/2;
-      const cy=t.bbox[1]+t.bbox[3]/2;
+      t.bbox=t.predicted;
+      // Reset armed counter when track is missed
+      if(t.armedFrames>0) t.armedFrames=Math.max(0,t.armedFrames-2);
+      const cx=t.bbox[0]+t.bbox[2]/2, cy=t.bbox[1]+t.bbox[3]/2;
       t.trail.push({x:cx,y:cy});
       if(t.trail.length>trailLen) t.trail.shift();
     }
   });
-
-  // Step 4: Kill old tracks
   tracks=tracks.filter(t=>t.missed<MAX_MISSED);
-
-  // Step 5: Create new tracks for unmatched detections
   detections.forEach((d,di)=>{
     if(!usedDet.has(di)){
       const color=TRAIL_COLORS[(nextId-1)%TRAIL_COLORS.length];
       tracks.push({
-        id:nextId++,
-        cls:d.cls,
-        conf:d.conf,
-        bbox:[...d.bbox],
-        kalman:new KalmanBox(d.bbox),
+        id:nextId++, cls:d.cls, conf:d.conf,
+        bbox:[...d.bbox], kalman:new KalmanBox(d.bbox),
         predicted:[...d.bbox],
-        trail:[{x:d.bbox[0]+d.bbox[2]/2, y:d.bbox[1]+d.bbox[3]/2}],
-        age:1,
-        missed:0,
-        color:color,
-        zoneHit:false,
-        zoneHitLogged:false,
-        armed:false
+        trail:[{x:d.bbox[0]+d.bbox[2]/2,y:d.bbox[1]+d.bbox[3]/2}],
+        age:1, missed:0, color,
+        zoneHit:false, zoneHitLogged:false,
+        // ── ARMED FRAME COUNTER ──
+        armedFrames:0,       // consecutive frames passing gates
+        armedConfirmed:false,// true only after ARM_FRAMES_REQUIRED
+        armedLoggedAt:0      // avoid spam logging
       });
     }
   });
-
   return tracks;
 }
 
-// ══════════════════════════════════════════════════
-// RESTRICTED ZONE — Point-in-polygon test
-// ══════════════════════════════════════════════════
-function pointInZone(px, py){
+// ── ZONE ─────────────────────────────────────────
+function pointInZone(px,py){
   if(zonePoints.length<3) return false;
   let inside=false;
-  const pts=zonePoints;
-  for(let i=0,j=pts.length-1;i<pts.length;j=i++){
-    const xi=pts[i].x,yi=pts[i].y;
-    const xj=pts[j].x,yj=pts[j].y;
-    const intersect=((yi>py)!==(yj>py))&&(px<(xj-xi)*(py-yi)/(yj-yi)+xi);
-    if(intersect) inside=!inside;
+  for(let i=0,j=zonePoints.length-1;i<zonePoints.length;j=i++){
+    const xi=zonePoints[i].x,yi=zonePoints[i].y;
+    const xj=zonePoints[j].x,yj=zonePoints[j].y;
+    if(((yi>py)!==(yj>py))&&(px<(xj-xi)*(py-yi)/(yj-yi)+xi)) inside=!inside;
   }
   return inside;
 }
 
-// ══════════════════════════════════════════════════
-// ARMED PERSON DETECTION
-// Upper-body + ratio check (no legs false positive)
-// ══════════════════════════════════════════════════
-function isArmed(bbox){
-  const[x,y,w,h]=bbox;
-  const ratio=w/h;
-  const topFrac=y/ov.height;
-  const heightFrac=h/ov.height;
-  if(topFrac>0.45) return false;   // starts too low = legs only
-  if(heightFrac<0.25) return false; // too small = distant
-  if(ratio<0.70) return false;      // not wide enough
-  return true;
-}
-
-// ── ZONE DRAW ─────────────────────────────────────
 function handleZoneClick(e){
   if(!zoneDrawMode) return;
   const rect=ov.getBoundingClientRect();
-  const scaleX=ov.width/rect.width;
-  const scaleY=ov.height/rect.height;
-  const px=(e.clientX-rect.left)*scaleX;
-  const py=(e.clientY-rect.top)*scaleY;
+  const px=(e.clientX-rect.left)*(ov.width/rect.width);
+  const py=(e.clientY-rect.top)*(ov.height/rect.height);
   if(zonePoints.length>=4){
-    // Close zone
-    zoneDrawMode=false;
-    zoneActive=true;
+    zoneDrawMode=false; zoneActive=true;
     $('zoneBtn').classList.remove('active-btn');
     $('zoneMsg').classList.remove('show');
     $('dZone').className='dot warn';
-    sysLog('Restricted zone activated','warn');
-    return;
+    sysLog('Restricted zone activated','warn'); return;
   }
   zonePoints.push({x:px,y:py});
   sysLog(`Zone point ${zonePoints.length} set (${Math.round(px)},${Math.round(py)})`,'sys');
   if(zonePoints.length===4){
-    zoneDrawMode=false;
-    zoneActive=true;
+    zoneDrawMode=false; zoneActive=true;
     $('zoneBtn').classList.remove('active-btn');
     $('zoneMsg').classList.remove('show');
     $('dZone').className='dot warn';
@@ -706,9 +699,7 @@ function toggleZoneDraw(){
     $('zoneMsg').classList.remove('show');
     return;
   }
-  zonePoints=[];
-  zoneDrawMode=true;
-  zoneActive=false;
+  zonePoints=[]; zoneDrawMode=true; zoneActive=false;
   $('dZone').className='dot';
   $('zoneBtn').classList.add('active-btn');
   $('zoneMsg').classList.add('show');
@@ -716,9 +707,7 @@ function toggleZoneDraw(){
 }
 
 function clearZone(){
-  zonePoints=[];
-  zoneDrawMode=false;
-  zoneActive=false;
+  zonePoints=[]; zoneDrawMode=false; zoneActive=false;
   $('dZone').className='dot';
   $('zoneBtn').classList.remove('active-btn');
   $('zoneMsg').classList.remove('show');
@@ -728,32 +717,22 @@ function clearZone(){
 // ── MAIN LOOP ─────────────────────────────────────
 async function loop(){
   if(!running) return;
-
-  // FPS
   frameCount++;
   const now=Date.now();
   if(now-fpsTimer>=1000){
     fps=frameCount; frameCount=0; fpsTimer=now;
     $('hFPS').textContent=fps; $('bFPS').textContent='FPS:'+fps;
   }
-
-  // Draw video
   if(vid.readyState>=2){
     ov.width=vid.videoWidth||ov.width;
     ov.height=vid.videoHeight||ov.height;
     ctx.drawImage(vid,0,0,ov.width,ov.height);
   }
-
-  // Motion
   const motion=getMotion();
-
-  // AI every 4th frame
   frameIdx++;
   if(model&&frameIdx%4===0&&vid.readyState>=2){
     try{lastPreds=await model.detect(vid);}catch{lastPreds=[];}
   }
-
-  // Build detections for tracker
   const dets=[];
   let maxConf=0;
   lastPreds.forEach(p=>{
@@ -761,18 +740,58 @@ async function loop(){
     const c=p.class;
     const isP=PERSONS.has(c),isV=VEHICLES.has(c),isA=ANIMALS.has(c);
     if(!isP&&!isV&&!isA) return;
-    const cls=isP?'person':isV?'vehicle':'animal';
-    dets.push({bbox:p.bbox, cls, conf:p.score});
+    dets.push({bbox:p.bbox,cls:isP?'person':isV?'vehicle':'animal',conf:p.score});
     if(p.score>maxConf) maxConf=p.score;
   });
-
-  // Update tracker
   const activeTracks=updateTracker(dets);
 
-  // Draw everything
+  // ── UPDATE ARMED FRAME COUNTERS ──────────────────
+  // This runs AFTER tracker update so bboxes are fresh
+  let anyConfirming=false, maxArmPct=0;
+  activeTracks.forEach(t=>{
+    if(t.cls!=='person'){t.armedFrames=0;t.armedConfirmed=false;return;}
+    const candidate=isArmedCandidate(t.bbox,ov.width,ov.height);
+    if(candidate){
+      t.armedFrames=Math.min(t.armedFrames+1, ARM_FRAMES_REQUIRED);
+    } else {
+      // Decay counter when gates stop passing
+      t.armedFrames=Math.max(0,t.armedFrames-1);
+    }
+    const wasConfirmed=t.armedConfirmed;
+    t.armedConfirmed=(t.armedFrames>=ARM_FRAMES_REQUIRED);
+    // Log transition to confirmed
+    if(t.armedConfirmed&&!wasConfirmed){
+      sysLog(`ARMED THREAT CONFIRMED: Track #${t.id} — ${ARM_FRAMES_REQUIRED} frame threshold met`,'alert');
+    }
+    // Log if confirmed → cleared
+    if(!t.armedConfirmed&&wasConfirmed&&t.armedFrames===0){
+      sysLog(`Track #${t.id} — armed status cleared`,'info');
+    }
+    // Tracking for sidebar progress bar
+    const pct=t.armedFrames/ARM_FRAMES_REQUIRED;
+    if(pct>0&&pct<1) anyConfirming=true;
+    if(pct>maxArmPct) maxArmPct=pct;
+  });
+
+  // Update armed confirmation panel
+  updateArmPanel(anyConfirming, maxArmPct);
+
   drawScene(activeTracks, motion, maxConf);
   updateSidebar(activeTracks);
   requestAnimationFrame(loop);
+}
+
+// ── ARMED CONFIRMATION PANEL ──────────────────────
+function updateArmPanel(anyConfirming, pct){
+  const pnl=$('armConfirmPnl');
+  if(anyConfirming){
+    pnl.style.display='block';
+    $('armBar').style.width=(pct*100)+'%';
+    $('armConfirmPct').textContent=Math.round(pct*100)+'%';
+    $('armFramesNeeded').textContent=ARM_FRAMES_REQUIRED;
+  } else {
+    pnl.style.display='none';
+  }
 }
 
 // ── MOTION DETECTION ─────────────────────────────
@@ -794,10 +813,11 @@ function getMotion(){
 
 // ── DRAW SCENE ────────────────────────────────────
 function drawScene(activeTracks, motion, maxConf){
-  let persons=0,vehicles=0,zoneHitCount=0,enemyDetected=false,intrusionDetected=false;
+  let persons=0,vehicles=0,zoneHitCount=0;
+  let enemyDetected=false,intrusionDetected=false;
   let bannerType=null;
 
-  // Draw restricted zone
+  // Draw zone
   if(zonePoints.length>=2){
     ctx.beginPath();
     ctx.moveTo(zonePoints[0].x,zonePoints[0].y);
@@ -807,20 +827,17 @@ function drawScene(activeTracks, motion, maxConf){
     ctx.setLineDash([8,4]); ctx.lineWidth=2; ctx.stroke(); ctx.setLineDash([]);
     if(zoneActive&&zonePoints.length>=3){
       ctx.fillStyle='rgba(255,145,0,0.04)'; ctx.fill();
-      // Zone label
       const cx=zonePoints.reduce((s,p)=>s+p.x,0)/zonePoints.length;
       const cy=zonePoints.reduce((s,p)=>s+p.y,0)/zonePoints.length;
       ctx.font=`bold ${Math.max(10,ov.width*0.014)}px monospace`;
       ctx.fillStyle='rgba(255,145,0,0.8)';
       ctx.fillText('⬡ RESTRICTED ZONE',cx-60,cy);
     }
-    // Draw corner dots while drawing
     if(zoneDrawMode){
       zonePoints.forEach((p,i)=>{
         ctx.beginPath(); ctx.arc(p.x,p.y,5,0,Math.PI*2);
         ctx.fillStyle='#ff9100'; ctx.fill();
-        ctx.fillStyle='#000';
-        ctx.font='bold 10px monospace';
+        ctx.fillStyle='#000'; ctx.font='bold 10px monospace';
         ctx.fillText(i+1,p.x+7,p.y+4);
       });
     }
@@ -831,10 +848,10 @@ function drawScene(activeTracks, motion, maxConf){
     const[x,y,w,h]=t.bbox;
     if(w<=0||h<=0) return;
 
-    const armed=t.cls==='person'&&isArmed(t.bbox);
-    t.armed=armed;
+    // ── USE armedConfirmed (frame-gated) not raw isArmedCandidate ──
+    const armed=t.cls==='person'&&t.armedConfirmed;
+    const confirming=t.cls==='person'&&t.armedFrames>0&&!t.armedConfirmed;
 
-    // Check zone intrusion
     const cx=x+w/2, cy=y+h/2;
     const inZone=zoneActive&&pointInZone(cx,cy);
 
@@ -850,25 +867,22 @@ function drawScene(activeTracks, motion, maxConf){
         }
       }
     } else if(t.cls==='vehicle') vehicles++;
-
     if(inZone) zoneHitCount++;
 
-    // Color logic
-    const col=armed?'#ff1744':inZone?'#ff9100':
+    // Color: red if armed-confirmed, yellow if confirming, orange if in zone, else class color
+    const col=armed?'#ff1744':confirming?'#ffd600':inZone?'#ff9100':
       t.cls==='person'?t.color:t.cls==='vehicle'?'#ffd600':'#ff9100';
 
     // ── TRAJECTORY TRAIL ──
     if(showTrails&&t.trail.length>1){
       for(let i=1;i<t.trail.length;i++){
         const alpha=i/t.trail.length;
-        const lw=Math.max(0.5,alpha*2.5);
         ctx.beginPath();
         ctx.moveTo(t.trail[i-1].x,t.trail[i-1].y);
         ctx.lineTo(t.trail[i].x,t.trail[i].y);
         ctx.strokeStyle=col+(Math.round(alpha*200)).toString(16).padStart(2,'0');
-        ctx.lineWidth=lw; ctx.stroke();
+        ctx.lineWidth=Math.max(0.5,alpha*2.5); ctx.stroke();
       }
-      // Tail dot
       const last=t.trail[t.trail.length-1];
       ctx.beginPath(); ctx.arc(last.x,last.y,3,0,Math.PI*2);
       ctx.fillStyle=col; ctx.fill();
@@ -876,7 +890,7 @@ function drawScene(activeTracks, motion, maxConf){
 
     // ── BOUNDING BOX ──
     ctx.fillStyle=col+'16'; ctx.fillRect(x,y,w,h);
-    ctx.strokeStyle=col; ctx.lineWidth=2; ctx.strokeRect(x,y,w,h);
+    ctx.strokeStyle=col; ctx.lineWidth=armed?3:2; ctx.strokeRect(x,y,w,h);
 
     // ── CIRCLE for persons ──
     if(t.cls==='person'){
@@ -884,6 +898,28 @@ function drawScene(activeTracks, motion, maxConf){
       ctx.arc(cx,cy,Math.max(w,h)*0.62,0,Math.PI*2);
       ctx.strokeStyle=col+'88'; ctx.lineWidth=1.5;
       ctx.setLineDash([6,4]); ctx.stroke(); ctx.setLineDash([]);
+    }
+
+    // ── ARMED CONFIRMATION RING (pulsing while confirming) ──
+    if(confirming){
+      const pct=t.armedFrames/ARM_FRAMES_REQUIRED;
+      const r=Math.max(w,h)*0.75;
+      ctx.beginPath();
+      ctx.arc(cx,cy,r,0,Math.PI*2*pct);
+      ctx.strokeStyle='rgba(255,214,0,0.7)';
+      ctx.lineWidth=2; ctx.setLineDash([4,3]); ctx.stroke(); ctx.setLineDash([]);
+      // Progress label
+      ctx.font=`bold ${Math.max(9,ov.width*0.012)}px monospace`;
+      ctx.fillStyle='rgba(255,214,0,0.9)';
+      ctx.fillText(`CONFIRM ${Math.round(pct*100)}%`,x+2,y-14);
+    }
+
+    // ── ARMED ALERT RING (full, pulsing) ──
+    if(armed){
+      const r=Math.max(w,h)*0.78;
+      ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2);
+      ctx.strokeStyle='rgba(255,23,68,0.6)'; ctx.lineWidth=2;
+      ctx.setLineDash([5,3]); ctx.stroke(); ctx.setLineDash([]);
     }
 
     // ── CORNER TICKS for vehicles ──
@@ -896,35 +932,32 @@ function drawScene(activeTracks, motion, maxConf){
       });
     }
 
-    // ── TRACK ID LABEL ──
+    // ── TRACK LABEL ──
     const fs=Math.max(10,ov.width*0.015);
     ctx.font=`bold ${fs}px monospace`;
-    const status=armed?'ARMED':inZone?'⚠ZONE':'';
-    const lbl=`#${t.id} ${t.cls.toUpperCase()}${status?' ':''}${status}`;
+    const status=armed?'ARMED':confirming?'VERIFYING':inZone?'⚠ZONE':'';
+    const lbl=`#${t.id} ${t.cls.toUpperCase()}${status?' ':''} ${status}`.trim();
     const tw=ctx.measureText(lbl).width+10;
     ctx.fillStyle=col; ctx.fillRect(x-1,y-fs-6,tw,fs+6);
     ctx.fillStyle='#000'; ctx.fillText(lbl,x+4,y-2);
 
-    // ── CONFIDENCE MINI BAR ──
+    // ── CONFIDENCE BAR ──
     const bw=Math.min(w,60);
     ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(x,y+h+2,bw,3);
     ctx.fillStyle=col; ctx.fillRect(x,y+h+2,bw*(t.conf||0.7),3);
 
     // ── VELOCITY ARROW ──
     if(t.trail.length>=3){
-      const t1=t.trail[t.trail.length-3];
-      const t2=t.trail[t.trail.length-1];
+      const t1=t.trail[t.trail.length-3], t2=t.trail[t.trail.length-1];
       const vx=t2.x-t1.x, vy=t2.y-t1.y;
       const spd=Math.sqrt(vx*vx+vy*vy);
       if(spd>2){
         const scale=Math.min(spd*2,40);
         const ex=cx+vx/spd*scale, ey=cy+vy/spd*scale;
+        const angle=Math.atan2(vy,vx);
         ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(ex,ey);
         ctx.strokeStyle=col+'cc'; ctx.lineWidth=2; ctx.stroke();
-        // Arrowhead
-        const angle=Math.atan2(vy,vx);
-        ctx.beginPath();
-        ctx.moveTo(ex,ey);
+        ctx.beginPath(); ctx.moveTo(ex,ey);
         ctx.lineTo(ex-8*Math.cos(angle-0.4),ey-8*Math.sin(angle-0.4));
         ctx.lineTo(ex-8*Math.cos(angle+0.4),ey-8*Math.sin(angle+0.4));
         ctx.closePath(); ctx.fillStyle=col; ctx.fill();
@@ -944,7 +977,7 @@ function drawScene(activeTracks, motion, maxConf){
     ctx.fillText('MOTION DETECTED',cxm-55,cym-55);
   }
 
-  // Update HUD
+  // ── HUD UPDATE ──
   $('hP').textContent=persons;
   $('hV').textContent=vehicles;
   $('hTracks').textContent=activeTracks.length;
@@ -956,15 +989,12 @@ function drawScene(activeTracks, motion, maxConf){
   $('sV').textContent=vehicles;
   $('sTr').textContent=activeTracks.length;
   $('sZ').textContent=zoneAlerts;
-
-  // Status dots
   $('dTrack').className=activeTracks.length>0?'dot on':'dot';
 
-  // Threat banner
+  // ── BANNER LOGIC ──
   if(enemyDetected) bannerType='enemy';
   else if(intrusionDetected) bannerType='intrusion';
   else if(motion.detected&&activeTracks.length>0) bannerType='motion';
-
   showBanner(bannerType);
 }
 
@@ -984,7 +1014,7 @@ function showBanner(type){
     if(type!==lastBanner){
       lastBanner=type;
       totalAlerts++;
-      sysLog(BANNER_TXT[type].replace('⚠','').replace('⬡','').replace('◉','').trim(),
+      sysLog(BANNER_TXT[type].replace(/[⚠⬡◉]/g,'').trim(),
         type==='enemy'?'alert':type==='intrusion'?'warn':'info');
     }
     bannerTimer=setTimeout(()=>{bn.className='thr-ban';lastBanner=null;},BANNER_HOLD);
@@ -1002,34 +1032,33 @@ function updateSidebar(activeTracks){
       return;
     }
     tl.innerHTML=activeTracks.map(t=>{
-      const inZone=zoneActive&&pointInZone(t.bbox[0]+t.bbox[2]/2, t.bbox[1]+t.bbox[3]/2);
-      const status=t.armed?'ARMED':inZone?'ZONE':'CLEAR';
-      const statusCls=t.armed?'threat':inZone?'zone':'clear';
-      const spd=t.trail.length>=3?calcSpeed(t.trail):0;
-      const cls=t.armed?'armed':inZone?'zone':t.cls;
+      const inZone=zoneActive&&pointInZone(t.bbox[0]+t.bbox[2]/2,t.bbox[1]+t.bbox[3]/2);
+      const armed=t.armedConfirmed;
+      const confirming=t.armedFrames>0&&!armed;
+      const status=armed?'ARMED':confirming?`VER${Math.round(t.armedFrames/ARM_FRAMES_REQUIRED*100)}%`:inZone?'ZONE':'CLEAR';
+      const statusCls=armed?'threat':confirming?'confirm':inZone?'zone':'clear';
+      const spd=t.trail.length>=3?calcSpeed(t.trail):'0px/f';
+      const cls=armed?'armed':inZone?'zone':t.cls;
       return `<div class="track-item ${cls}">
         <span class="track-id">#${t.id}</span> ${t.cls.toUpperCase()}
         <span class="track-status ${statusCls}">${status}</span><br>
-        CONF: ${Math.round((t.conf||0.7)*100)}% · SPD: ${spd} · AGE: ${t.age}f
+        CONF:${Math.round((t.conf||0.7)*100)}% · SPD:${spd} · AGE:${t.age}f
       </div>`;
     }).join('');
   },100);
 }
 
 function calcSpeed(trail){
-  if(trail.length<3) return '0';
   const t1=trail[trail.length-3], t2=trail[trail.length-1];
   const dx=t2.x-t1.x, dy=t2.y-t1.y;
-  const px=Math.round(Math.sqrt(dx*dx+dy*dy));
-  return `${px}px/f`;
+  return `${Math.round(Math.sqrt(dx*dx+dy*dy))}px/f`;
 }
 
 // ── EVENT LOG ─────────────────────────────────────
 function sysLog(msg,type='sys'){
   const t=new Date().toTimeString().slice(0,8);
   const d=document.createElement('div');
-  d.className=`al ${type}`;
-  d.textContent=`[${t}] ${msg}`;
+  d.className=`al ${type}`; d.textContent=`[${t}] ${msg}`;
   const l=$('evLog'); l.insertBefore(d,l.firstChild);
   while(l.children.length>50) l.removeChild(l.lastChild);
 }
@@ -1037,16 +1066,20 @@ function sysLog(msg,type='sys'){
 // ── CONTROLS ─────────────────────────────────────
 function setConf(v){ threshold=parseInt(v)/100; $('confV').textContent=v+'%'; }
 function setTrail(v){ trailLen=parseInt(v); $('trailV').textContent=v; }
+function setArmFrames(v){
+  ARM_FRAMES_REQUIRED=parseInt(v); $('armV').textContent=v;
+  sysLog(`Armed confirmation threshold set: ${v} frames`,'sys');
+}
 function toggleTrails(){
   showTrails=!showTrails;
-  $('trackList').previousElementSibling.previousElementSibling
-    .querySelector('.cb.b').textContent=`⟳ TRAILS\n${showTrails?'ON':'OFF'}`;
+  $('trailBtn').textContent=`⟳ TRAILS\n${showTrails?'ON':'OFF'}`;
 }
 function doReset(){
   tracks=[]; nextId=1; totalAlerts=0; zoneAlerts=0;
   lastBanner=null; clearTimeout(bannerTimer);
   $('thrBan').className='thr-ban';
   $('evLog').innerHTML='';
+  $('armConfirmPnl').style.display='none';
   ['dTrack'].forEach(id=>$(id).className='dot');
   sysLog('System reset — all tracks and counters cleared','ok');
 }
