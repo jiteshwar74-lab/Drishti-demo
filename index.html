@@ -484,7 +484,8 @@ async function activate(){
       $('dTrack').className='dot on';
       $('bModel').textContent='MODEL: COCO-SSD + MTT';
       sysLog('AI engine loaded — lite_mobilenet_v2','ok');
-      sysLog('Multi-target tracker initialised — Kalman+IoU','ok');
+      sysLog('Multi-target tracker initialised — Kalman+IoU+NMS','ok');
+      sysLog(`NMS merge threshold: 0.40 IoU — duplicate suppression active`,'ok');
       sysLog(`Armed confirmation: ${ARM_FRAMES_REQUIRED} consecutive frames required`,'ok');
       sysLog('Post: Ganasok · Sector Alpha · 18,000 ft','sys');
     }catch(e){
@@ -539,6 +540,49 @@ class KalmanBox{
   }
 }
 
+// ══════════════════════════════════════════════════
+// NON-MAXIMUM SUPPRESSION + BOX MERGE
+// Fixes: "two feet of same person = two person tracks"
+//
+// Algorithm:
+//   1. Sort detections by confidence (highest first)
+//   2. For each detection, check if it overlaps >NMS_THRESH
+//      IoU with any already-kept detection OF SAME CLASS
+//   3. If yes → MERGE the two boxes into their union bbox
+//      (not suppress/discard — merge gives a larger, more
+//      complete bounding box covering both partial detections)
+//   4. If no → keep as new detection
+//
+// Result: two partial-body detections of same person
+// collapse into one larger box → one track, one ID.
+// ══════════════════════════════════════════════════
+function nmsAndMerge(rawDets, nmsThresh){
+  // Sort by confidence desc
+  const sorted=[...rawDets].sort((a,b)=>b.conf-a.conf);
+  const kept=[];
+  sorted.forEach(d=>{
+    let merged=false;
+    for(let i=0;i<kept.length;i++){
+      if(kept[i].cls!==d.cls) continue;
+      const overlap=iou(kept[i].bbox, d.bbox);
+      if(overlap>=nmsThresh){
+        // MERGE: take union of both boxes
+        const ax=Math.min(kept[i].bbox[0], d.bbox[0]);
+        const ay=Math.min(kept[i].bbox[1], d.bbox[1]);
+        const ax2=Math.max(kept[i].bbox[0]+kept[i].bbox[2], d.bbox[0]+d.bbox[2]);
+        const ay2=Math.max(kept[i].bbox[1]+kept[i].bbox[3], d.bbox[1]+d.bbox[3]);
+        kept[i].bbox=[ax, ay, ax2-ax, ay2-ay];
+        // Keep higher confidence
+        kept[i].conf=Math.max(kept[i].conf, d.conf);
+        merged=true;
+        break;
+      }
+    }
+    if(!merged) kept.push({...d, bbox:[...d.bbox]});
+  });
+  return kept;
+}
+
 // ── IoU ───────────────────────────────────────────
 function iou(a,b){
   const ax2=a[0]+a[2],ay2=a[1]+a[3],bx2=b[0]+b[2],by2=b[1]+b[3];
@@ -550,57 +594,81 @@ function iou(a,b){
 }
 
 // ══════════════════════════════════════════════════
-// ARMED PERSON DETECTION — v2 FIXED
+// ARMED PERSON DETECTION — v3 FINAL
 //
-// ROOT CAUSE OF BUG (confirmed from trial photos):
-//   Old code used topFrac > 0.45 to reject leg-only
-//   detections. But at camera-down angle or partial
-//   body shots the box starts at y~0.35 (passes check)
-//   AND boots/legs spread wide (ratio passes too).
-//   Result: close-range leg/boot shot = ARMED flag.
+// Photos confirmed two failure modes:
 //
-// FIX — Three-gate system:
-//   Gate 1: BODY COVERAGE — bbox must cover at least
-//           35% of frame height (full/upper body present)
-//   Gate 2: HEAD ZONE — top of bbox must be in upper
-//           60% of frame (head must be visible region)
-//   Gate 3: ASPECT RATIO — width/height 0.3–0.85
-//           (tall narrow box = full body, not wide leg shot)
+// Mode A (v1 bug): Camera pointing DOWN at own feet/legs
+//   → COCO-SSD returns box starting at y≈0 (fills frame)
+//   → Old topFrac check failed since topFrac was LOW
 //
-// PLUS: Frame counter — isArmedCandidate() just flags
-//       a candidate. armedConfirmedFrames must reach
-//       ARM_FRAMES_REQUIRED before ENEMY ATTACK fires.
+// Mode B (v2 bug): After NMS merges two foot detections,
+//   the merged box is TALL (top near 0, fills frame height)
+//   → All 4 gates passed even though it's still feet
+//
+// ROOT TEST: When the camera is pointing down at own feet,
+//   the merged bounding box has:
+//   - topFrac ≈ 0.0–0.15 (starts at top)
+//   - heightFrac ≈ 0.7–1.0 (very tall, fills frame)
+//   - ratio (w/h) ≈ 0.3–0.6 (taller than wide — PASSES ratio gate)
+//   - centroid ≈ 0.4–0.6 vertically (PASSES centroid gate)
+//
+// NEW DEFINITIVE FIX — Camera-angle gate:
+//   If a "person" box covers >60% of frame HEIGHT and also
+//   covers >55% of frame WIDTH, the camera is almost certainly
+//   pointing straight down at a close subject — REJECT.
+//   This is physically impossible for a real standing person
+//   at surveillance distance (they would never fill the whole frame).
 // ══════════════════════════════════════════════════
 function isArmedCandidate(bbox, ovW, ovH){
   const [x, y, w, h] = bbox;
 
-  // Gate 1: Must cover significant height — not just legs/feet
-  // Legs-only at close range cover ~30-40% height but start mid-frame
-  // Full body or upper body covers 35%+ AND starts near top
-  const heightFrac = h / ovH;          // fraction of frame height
-  if(heightFrac < 0.30) return false;  // too small — distant, skip
+  const heightFrac = h / ovH;
+  const widthFrac  = w / ovW;
+  const topFrac    = y / ovH;
+  const ratio      = w / h;
+  const cy         = (y + h/2) / ovH;
 
-  // Gate 2: The TOP of the bounding box must be in upper 55% of frame
-  // This is the key fix — if box top is below 55%, it's legs/feet only
-  const topFrac = y / ovH;
-  if(topFrac > 0.55) return false;     // box starts too low = no head/torso
+  // Gate 1: Minimum apparent size — must be at least 15% of frame height
+  // Filters out tiny/distant false positives
+  if(heightFrac < 0.15) return false;
 
-  // Gate 3: Aspect ratio — full body is taller than wide
-  // Legs/boots pointing at camera are WIDE relative to height
-  // A proper upright person: ratio typically 0.25–0.75
-  const ratio = w / h;
-  if(ratio > 0.80) return false;       // too wide — lateral/feet view
-  if(ratio < 0.20) return false;       // too narrow — edge/partial only
+  // Gate 2: DOWNWARD CAMERA / CLOSE BODY PART REJECTION
+  // A real standing person at surveillance distance CANNOT fill
+  // more than ~60% height AND ~55% width simultaneously.
+  // This catches: feet pointed at camera, torso fills frame, etc.
+  if(heightFrac > 0.60 && widthFrac > 0.50) return false;
 
-  // Gate 4: The combined box centre must be in upper 70% of frame
-  // Prevents centroid of a boot close-up from being flagged
-  const cy = (y + h/2) / ovH;
-  if(cy > 0.72) return false;          // centroid too low — feet region
+  // Gate 3: Box must not be excessively tall relative to width
+  // A standing person at range: ratio 0.25–0.75
+  // Own boots/close body filling frame: ratio can be 0.3–0.5 BUT
+  // they are caught by Gate 2 first. This catches other edge cases.
+  if(ratio > 0.90) return false;   // too wide = lateral/sprawled
+  if(ratio < 0.15) return false;   // impossibly thin = artifact
+
+  // Gate 4: Head region must be plausibly in frame
+  // If top of box is below 60% of frame height, no head visible
+  if(topFrac > 0.60) return false;
+
+  // Gate 5: Centroid must not be in bottom third of frame
+  // Leg/feet detections cluster in cy > 0.65
+  if(cy > 0.68) return false;
 
   return true;
 }
 
 // ── MULTI-TARGET TRACKER ──────────────────────────
+// Track ID recycling: dead track IDs go into a free pool
+// and are reused for new tracks. This keeps IDs stable
+// and prevents the counter from climbing to #29, #30...
+// during a single session of pointing camera at own feet.
+const freeIds = [];   // pool of recycled IDs
+
+function getNextId(){
+  if(freeIds.length > 0) return freeIds.sort((a,b)=>a-b).shift();
+  return nextId++;
+}
+
 function updateTracker(detections){
   tracks.forEach(t=>{ t.predicted=t.kalman.predict(); });
 
@@ -636,12 +704,15 @@ function updateTracker(detections){
       if(t.trail.length>trailLen) t.trail.shift();
     }
   });
+  // Kill old tracks AND recycle their IDs
+  const killed = tracks.filter(t=>t.missed>=MAX_MISSED);
+  killed.forEach(t=>{ if(t.id < 20) freeIds.push(t.id); }); // recycle low IDs only
   tracks=tracks.filter(t=>t.missed<MAX_MISSED);
   detections.forEach((d,di)=>{
     if(!usedDet.has(di)){
       const color=TRAIL_COLORS[(nextId-1)%TRAIL_COLORS.length];
       tracks.push({
-        id:nextId++, cls:d.cls, conf:d.conf,
+        id:getNextId(), cls:d.cls, conf:d.conf,
         bbox:[...d.bbox], kalman:new KalmanBox(d.bbox),
         predicted:[...d.bbox],
         trail:[{x:d.bbox[0]+d.bbox[2]/2,y:d.bbox[1]+d.bbox[3]/2}],
@@ -733,16 +804,25 @@ async function loop(){
   if(model&&frameIdx%4===0&&vid.readyState>=2){
     try{lastPreds=await model.detect(vid);}catch{lastPreds=[];}
   }
-  const dets=[];
+  // ── STEP 1: Filter raw predictions ───────────────
+  const rawDets=[];
   let maxConf=0;
   lastPreds.forEach(p=>{
     if(p.score<threshold) return;
     const c=p.class;
     const isP=PERSONS.has(c),isV=VEHICLES.has(c),isA=ANIMALS.has(c);
     if(!isP&&!isV&&!isA) return;
-    dets.push({bbox:p.bbox,cls:isP?'person':isV?'vehicle':'animal',conf:p.score});
+    rawDets.push({bbox:p.bbox,cls:isP?'person':isV?'vehicle':'animal',conf:p.score});
     if(p.score>maxConf) maxConf=p.score;
   });
+
+  // ── STEP 2: Non-Maximum Suppression ──────────────
+  // Merges two boxes for the SAME CLASS that overlap >50% IoU
+  // into a single larger bounding box (union). This is the fix
+  // for "two feet = two persons" — both foot boxes overlap heavily
+  // so they collapse into one detection before reaching the tracker.
+  const dets = nmsAndMerge(rawDets, 0.40);
+
   const activeTracks=updateTracker(dets);
 
   // ── UPDATE ARMED FRAME COUNTERS ──────────────────
@@ -1075,7 +1155,8 @@ function toggleTrails(){
   $('trailBtn').textContent=`⟳ TRAILS\n${showTrails?'ON':'OFF'}`;
 }
 function doReset(){
-  tracks=[]; nextId=1; totalAlerts=0; zoneAlerts=0;
+  tracks=[]; nextId=1; freeIds.length=0;
+  totalAlerts=0; zoneAlerts=0;
   lastBanner=null; clearTimeout(bannerTimer);
   $('thrBan').className='thr-ban';
   $('evLog').innerHTML='';
