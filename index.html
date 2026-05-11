@@ -4,199 +4,211 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>DRISHTI — Real-Time Intrusion Surveillance</title>
-<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>DRISHTI v3 — Surveillance System</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.2/dist/coco-ssd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface@0.0.7/dist/blazeface.min.js"></script>
 <style>
 :root{
-  --g:#00ff88;--g2:#00cc66;--r:#ff1744;--y:#ffd600;--b:#00b0ff;
-  --bg:#020508;--p1:#050c10;--p2:#081018;
+  --g:#00ff88;--g2:#00cc66;--g3:#004422;
+  --r:#ff1744;--y:#ffd600;--b:#00b0ff;--o:#ff9100;
+  --bg:#020508;--p1:#050c10;
   --bdr:#0c2018;--bdr2:#14301e;
   --txt:#70ffb8;--dim:#246040;--dim2:#0c1e14;
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--txt);font-family:'Rajdhani',sans-serif;}
-
-/* Scanline */
-body::before{content:’’;position:fixed;inset:0;pointer-events:none;z-index:8000;
-background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,0.75)100%),
-repeating-linear-gradient(0deg,transparent 0,transparent 2px,rgba(0,255,100,0.016)2px,rgba(0,255,100,0.016)4px);}
-
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9000;
+background:radial-gradient(ellipse at center,transparent 50%,rgba(0,0,0,0.72)100%),
+repeating-linear-gradient(0deg,transparent 0,transparent 2px,rgba(0,255,100,0.014)2px,rgba(0,255,100,0.014)4px);}
 .app{display:flex;flex-direction:column;height:100vh;}
 
-/* ── HEADER ── */
-.hdr{
-background:linear-gradient(90deg,var(–p1)0%,#061210 100%);
-border-bottom:1px solid var(–bdr2);
-padding:0 14px;height:54px;
-display:flex;align-items:center;justify-content:space-between;
-flex-shrink:0;position:relative;overflow:hidden;
-}
+/* HEADER */
+.hdr{background:linear-gradient(90deg,var(–p1) 0%,#061210 100%);border-bottom:1px solid var(–bdr2);
+padding:0 14px;height:52px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;position:relative;}
 .hdr::after{content:’’;position:absolute;bottom:0;left:0;right:0;height:1px;
-background:linear-gradient(90deg,transparent,var(–g),transparent);opacity:0.35;}
-.hdr-l{display:flex;align-items:center;gap:12px;}
-.emblem{width:38px;height:38px;flex-shrink:0;}
-.emblem svg{width:100%;height:100%;}
-.brand h1{font-family:‘Orbitron’,monospace;font-size:19px;font-weight:900;color:var(–g);
-letter-spacing:5px;line-height:1;text-shadow:0 0 18px rgba(0,255,136,0.55);}
-.brand p{font-family:‘Share Tech Mono’,monospace;font-size:8px;color:var(–dim);letter-spacing:1.5px;margin-top:2px;}
-.hdr-c{position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:10px;align-items:center;}
+background:linear-gradient(90deg,transparent,var(–g),transparent);opacity:0.3;}
+.brand{display:flex;align-items:center;gap:11px;}
+.emblem{width:36px;height:36px;flex-shrink:0;}
+.brand-txt h1{font-family:‘Orbitron’,monospace;font-size:17px;font-weight:900;color:var(–g);
+letter-spacing:5px;line-height:1;text-shadow:0 0 18px rgba(0,255,136,0.5);}
+.brand-txt p{font-family:‘Share Tech Mono’,monospace;font-size:8px;color:var(–dim);letter-spacing:2px;margin-top:2px;}
+.hdr-center{position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:8px;}
 .badge{font-family:‘Share Tech Mono’,monospace;font-size:9px;letter-spacing:2px;
 border:1px solid var(–bdr2);padding:3px 8px;color:var(–dim);background:var(–dim2);}
 .badge.live{border-color:var(–g2);color:var(–g);background:rgba(0,255,136,0.05);animation:glow 2s infinite;}
-@keyframes glow{0%,100%{box-shadow:none}50%{box-shadow:0 0 8px rgba(0,255,136,0.3)}}
-.hdr-r{text-align:right;}
-.clock{font-family:‘Orbitron’,monospace;font-size:15px;font-weight:600;color:var(–g);
-letter-spacing:2px;text-shadow:0 0 10px rgba(0,255,136,0.4);}
-.unit{font-family:‘Share Tech Mono’,monospace;font-size:8px;color:var(–dim);letter-spacing:1px;}
+.badge.v3{border-color:var(–b);color:var(–b);background:rgba(0,176,255,0.05);}
+.hdr-right{text-align:right;}
+.clock{font-family:‘Orbitron’,monospace;font-size:15px;font-weight:700;color:var(–g);letter-spacing:2px;}
+.hdr-sub{font-family:‘Share Tech Mono’,monospace;font-size:8px;color:var(–dim);letter-spacing:1px;}
 
-/* ── LAYOUT ── */
+/* LAYOUT */
 .body{display:flex;flex:1;overflow:hidden;}
-
-/* ── VIDEO ZONE ── */
 .feed{position:relative;flex:1;background:#000;overflow:hidden;}
 video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none;}
 canvas#ov{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
 
 /* Corner brackets */
-.brk{position:absolute;width:24px;height:24px;pointer-events:none;z-index:10;display:none;}
-.brk.tl{top:12px;left:12px;border-top:2px solid var(–g);border-left:2px solid var(–g);}
-.brk.tr{top:12px;right:12px;border-top:2px solid var(–g);border-right:2px solid var(–g);}
-.brk.bl{bottom:12px;left:12px;border-bottom:2px solid var(–g);border-left:2px solid var(–g);}
-.brk.br{bottom:12px;right:12px;border-bottom:2px solid var(–g);border-right:2px solid var(–g);}
+.brk{position:absolute;width:22px;height:22px;pointer-events:none;z-index:10;display:none;}
+.brk.tl{top:10px;left:10px;border-top:2px solid var(–g);border-left:2px solid var(–g);}
+.brk.tr{top:10px;right:10px;border-top:2px solid var(–g);border-right:2px solid var(–g);}
+.brk.bl{bottom:10px;left:10px;border-bottom:2px solid var(–g);border-left:2px solid var(–g);}
+.brk.br{bottom:10px;right:10px;border-bottom:2px solid var(–g);border-right:2px solid var(–g);}
 
-/* HUD text */
-.hud{position:absolute;font-family:‘Share Tech Mono’,monospace;font-size:10px;
-line-height:1.9;pointer-events:none;z-index:10;display:none;
-text-shadow:0 1px 4px rgba(0,0,0,0.9);}
-.hud.tl{top:12px;left:44px;color:rgba(0,255,136,0.85);}
-.hud.tr{top:12px;right:44px;text-align:right;color:rgba(0,255,136,0.85);}
-.hud.bl{bottom:12px;left:44px;color:rgba(0,255,136,0.85);}
-.hud.br{bottom:12px;right:44px;text-align:right;color:rgba(0,255,136,0.85);}
+/* HUD overlays */
+.hud{position:absolute;font-family:‘Share Tech Mono’,monospace;font-size:10px;line-height:2;
+pointer-events:none;z-index:10;display:none;text-shadow:0 1px 4px rgba(0,0,0,0.95);}
+.hud.tl{top:12px;left:38px;color:rgba(0,255,136,0.85);}
+.hud.tr{top:12px;right:38px;text-align:right;color:rgba(0,255,136,0.85);}
+.hud.bl{bottom:12px;left:38px;color:rgba(0,255,136,0.85);}
+.hud.br{bottom:12px;right:38px;text-align:right;color:rgba(0,255,136,0.85);}
 
 /* Threat banner */
-.thr-ban{
-position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+.thr-ban{position:absolute;top:40%;left:50%;transform:translate(-50%,-50%);
 font-family:‘Orbitron’,monospace;font-weight:900;letter-spacing:3px;
-padding:11px 26px;border:2px solid;text-align:center;
-display:none;pointer-events:none;z-index:20;white-space:nowrap;
-}
-.thr-ban.show{display:block;animation:bk 0.55s infinite;}
-@keyframes bk{0%,100%{opacity:1}50%{opacity:0.5}}
-.thr-ban.enemy{font-size:clamp(13px,3.5vw,22px);color:var(–r);border-color:var(–r);
-background:rgba(255,23,68,0.12);text-shadow:0 0 18px var(–r);box-shadow:0 0 28px rgba(255,23,68,0.22);}
-.thr-ban.logistics{font-size:clamp(12px,3vw,19px);color:var(–y);border-color:var(–y);
-background:rgba(255,214,0,0.08);text-shadow:0 0 15px var(–y);}
-.thr-ban.motion{font-size:clamp(12px,2.5vw,17px);color:var(–b);border-color:var(–b);
+padding:10px 24px;border:2px solid;text-align:center;
+display:none;pointer-events:none;z-index:20;white-space:nowrap;}
+.thr-ban.show{display:block;animation:bk 0.6s infinite;}
+@keyframes bk{0%,100%{opacity:1}50%{opacity:0.35}}
+.thr-ban.high{font-size:clamp(11px,2.5vw,16px);color:var(–r);border-color:var(–r);
+background:rgba(255,23,68,0.12);text-shadow:0 0 14px var(–r);}
+.thr-ban.medium{font-size:clamp(11px,2.5vw,16px);color:var(–o);border-color:var(–o);
+background:rgba(255,145,0,0.08);text-shadow:0 0 14px var(–o);}
+.thr-ban.low{font-size:clamp(11px,2.2vw,14px);color:var(–b);border-color:var(–b);
 background:rgba(0,176,255,0.08);text-shadow:0 0 12px var(–b);}
 
-/* Idle screen */
+/* Threat level bar */
+.thr-level{position:absolute;bottom:0;left:0;right:0;height:3px;
+background:var(–bdr);z-index:15;pointer-events:none;display:none;}
+.thr-level-fill{height:100%;width:0%;transition:width 0.4s,background 0.4s;}
+
+/* Idle */
 .idle{position:absolute;inset:0;display:flex;flex-direction:column;
 align-items:center;justify-content:center;gap:22px;background:var(–bg);z-index:30;}
-.idle-ring{width:84px;height:84px;border-radius:50%;border:2px solid var(–bdr2);
-display:flex;align-items:center;justify-content:center;
-animation:idlep 3s ease-in-out infinite;}
-@keyframes idlep{0%,100%{box-shadow:0 0 8px rgba(0,255,136,0.1)}50%{box-shadow:0 0 22px rgba(0,255,136,0.28)}}
-.idle-ring svg{width:48%;height:48%;opacity:0.45;}
+.idle-ring{width:88px;height:88px;border-radius:50%;border:1px solid var(–bdr2);
+display:flex;align-items:center;justify-content:center;animation:pulse 3s ease-in-out infinite;}
+@keyframes pulse{0%,100%{box-shadow:0 0 8px rgba(0,255,136,0.1)}50%{box-shadow:0 0 24px rgba(0,255,136,0.28)}}
+.idle-ring svg{width:48%;height:48%;opacity:0.4;}
 .idle-txt{font-family:‘Share Tech Mono’,monospace;font-size:11px;color:var(–dim);
-letter-spacing:2px;text-align:center;line-height:2.3;}
+letter-spacing:2px;text-align:center;line-height:2.4;}
+.idle-txt span{color:var(–g2);} .idle-txt .v3tag{color:var(–b);}
 .act-btn{font-family:‘Orbitron’,monospace;font-size:12px;font-weight:700;letter-spacing:4px;
-padding:15px 38px;border:2px solid var(–g);background:transparent;color:var(–g);
+padding:13px 34px;border:2px solid var(–g);background:transparent;color:var(–g);
 cursor:pointer;transition:all 0.2s;text-shadow:0 0 10px rgba(0,255,136,0.3);
 box-shadow:0 0 18px rgba(0,255,136,0.1);}
-.act-btn:hover{background:rgba(0,255,136,0.05);box-shadow:0 0 28px rgba(0,255,136,0.22);}
 .act-btn:active{transform:scale(0.97);}
 
-/* Loading screen */
+/* Load */
 .load{position:absolute;inset:0;display:none;flex-direction:column;
-align-items:center;justify-content:center;gap:18px;
-background:rgba(2,5,8,0.96);z-index:30;}
-.spin{width:50px;height:50px;border:2px solid var(–bdr2);
+align-items:center;justify-content:center;gap:18px;background:rgba(2,5,8,0.96);z-index:30;}
+.spin{width:46px;height:46px;border:2px solid var(–bdr2);
 border-top:2px solid var(–g);border-right:2px solid var(–g2);
 border-radius:50%;animation:spin 0.7s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg)}}
 .load-msg{font-family:‘Share Tech Mono’,monospace;font-size:11px;color:var(–g);
-letter-spacing:2px;text-align:center;}
-.load-bar{width:210px;height:2px;background:var(–bdr);overflow:hidden;}
+letter-spacing:2px;text-align:center;line-height:1.8;}
+.load-bar{width:220px;height:2px;background:var(–bdr);overflow:hidden;}
 .load-fill{height:100%;width:0%;background:var(–g);transition:width 0.35s;box-shadow:0 0 8px var(–g);}
+.load-step{font-family:‘Share Tech Mono’,monospace;font-size:9px;color:var(–dim);letter-spacing:1px;margin-top:-8px;}
 
-/* ── SIDEBAR ── */
-.side{width:265px;flex-shrink:0;background:var(–p1);
+/* SIDEBAR */
+.side{width:272px;flex-shrink:0;background:var(–p1);
 border-left:1px solid var(–bdr);display:flex;flex-direction:column;overflow:hidden;}
-
-.pnl{border-bottom:1px solid var(–bdr);padding:11px 13px;}
+.pnl{border-bottom:1px solid var(–bdr);padding:10px 12px;}
+.pnl.grow{flex:1;overflow:hidden;display:flex;flex-direction:column;}
 .pnl-h{font-family:‘Orbitron’,monospace;font-size:9px;color:var(–dim);letter-spacing:3px;
-margin-bottom:9px;padding-bottom:5px;border-bottom:1px solid var(–dim2);
+margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(–dim2);
 display:flex;align-items:center;gap:5px;}
-.pnl-h::before{content:’’;width:3px;height:9px;background:var(–g2);box-shadow:0 0 4px var(–g2);}
+.pnl-h::before{content:’’;width:3px;height:9px;background:var(–g2);box-shadow:0 0 4px var(–g2);flex-shrink:0;}
 
-/* Threat assess */
-.ta{font-family:‘Orbitron’,monospace;font-size:12px;font-weight:700;letter-spacing:2px;
-padding:11px;text-align:center;border:1px solid var(–bdr2);color:var(–dim);transition:all 0.3s;}
-.ta.standby{color:var(–dim);border-color:var(–bdr2);}
-.ta.motion{color:var(–b);border-color:var(–b);box-shadow:0 0 10px rgba(0,176,255,0.2);text-shadow:0 0 8px var(–b);}
-.ta.logistics{color:var(–y);border-color:var(–y);box-shadow:0 0 10px rgba(255,214,0,0.18);}
-.ta.enemy{color:var(–r);border-color:var(–r);box-shadow:0 0 14px rgba(255,23,68,0.28);animation:bk 0.5s infinite;}
+/* Threat score panel */
+.thr-score-wrap{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.thr-score-num{font-family:‘Orbitron’,monospace;font-size:28px;font-weight:900;line-height:1;width:48px;}
+.thr-score-num.low{color:var(–b);}
+.thr-score-num.medium{color:var(–o);}
+.thr-score-num.high{color:var(–r);}
+.thr-score-right{flex:1;}
+.thr-score-label{font-family:‘Share Tech Mono’,monospace;font-size:10px;letter-spacing:2px;margin-bottom:4px;}
+.thr-score-label.low{color:var(–b);}
+.thr-score-label.medium{color:var(–o);}
+.thr-score-label.high{color:var(–r);}
+.thr-bar-wrap{height:4px;background:var(–bdr);overflow:hidden;}
+.thr-bar{height:100%;transition:width 0.4s,background 0.4s;}
+.thr-factors{font-family:‘Share Tech Mono’,monospace;font-size:8px;color:var(–dim);
+letter-spacing:1px;line-height:1.9;}
+.thr-factor-row{display:flex;justify-content:space-between;align-items:center;}
+.thr-factor-val{font-size:9px;}
+.thr-factor-val.active{color:var(–o);}
+.thr-factor-val.clear{color:var(–g2);}
+.thr-factor-val.high{color:var(–r);}
 
-/* Stats */
-.sg{display:grid;grid-template-columns:1fr 1fr;gap:5px;}
-.sb{background:var(–dim2);border:1px solid var(–bdr);padding:8px 6px;text-align:center;}
-.sl{font-family:‘Share Tech Mono’,monospace;font-size:8px;color:var(–dim);letter-spacing:1.5px;display:block;margin-bottom:2px;}
-.sv{font-family:‘Orbitron’,monospace;font-size:21px;font-weight:700;line-height:1;}
-.sv.g{color:var(–g)}.sv.r{color:var(–r)}.sv.b{color:var(–b)}.sv.y{color:var(–y)}
+/* Stats grid */
+.sg{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;}
+.sb{background:var(–dim2);border:1px solid var(–bdr);padding:7px 4px;text-align:center;}
+.sl{font-family:‘Share Tech Mono’,monospace;font-size:7.5px;color:var(–dim);letter-spacing:1px;display:block;margin-bottom:2px;}
+.sv{font-family:‘Orbitron’,monospace;font-size:17px;font-weight:700;line-height:1;}
+.sv.g{color:var(–g)}.sv.r{color:var(–r)}.sv.b{color:var(–b)}.sv.y{color:var(–y)}.sv.o{color:var(–o)}
 
-/* Movement log */
-.me{font-family:‘Share Tech Mono’,monospace;font-size:9px;padding:6px 8px;
-border-left:2px solid var(–bdr);margin-bottom:4px;background:var(–dim2);line-height:1.8;color:var(–dim);}
-.me.motion{border-left-color:var(–b)}.me.logistics{border-left-color:var(–y)}.me.enemy{border-left-color:var(–r)}
-.me .mt{color:var(–g2);}
+/* Track list */
+.track-list{flex:1;overflow-y:auto;}
+.track-item{font-family:‘Share Tech Mono’,monospace;font-size:9px;
+padding:5px 7px;border-left:2px solid var(–bdr);margin-bottom:3px;
+background:var(–dim2);line-height:1.9;color:var(–dim);position:relative;}
+.track-item.person{border-left-color:var(–b);}
+.track-item.vehicle{border-left-color:var(–y);}
+.track-item.zone{border-left-color:var(–o);background:rgba(255,145,0,0.04);}
+.track-id{color:var(–g2);font-weight:700;}
+.ts{float:right;font-size:8px;letter-spacing:1px;}
+.ts.zone{color:var(–o);}.ts.clear{color:var(–dim);}
+
+/* Alert log */
+.alert-log{max-height:110px;overflow-y:auto;}
+.al{font-family:‘Share Tech Mono’,monospace;font-size:9px;padding:3px 0;
+border-bottom:1px solid var(–dim2);line-height:1.6;}
+.al.ok{color:var(–g2)}.al.info{color:var(–b)}.al.warn{color:var(–o)}.al.alert{color:var(–r)}.al.sys{color:var(–dim)}
 
 /* Controls */
-.cg{display:grid;grid-template-columns:1fr 1fr;gap:4px;}
+.ctrl-row{display:flex;align-items:center;gap:8px;padding:3px 0;}
+.ctrl-row label{font-family:‘Share Tech Mono’,monospace;font-size:9px;color:var(–dim);letter-spacing:1px;width:72px;flex-shrink:0;}
+.ctrl-row input[type=range]{flex:1;accent-color:var(–g);height:3px;cursor:pointer;}
+.ctrl-row span{font-family:‘Share Tech Mono’,monospace;font-size:10px;color:var(–g);width:28px;text-align:right;}
+.btn-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:6px;}
 .cb{background:var(–dim2);border:1px solid var(–bdr);font-family:‘Rajdhani’,sans-serif;
-font-size:11px;font-weight:700;letter-spacing:1px;padding:9px 5px;
+font-size:11px;font-weight:700;letter-spacing:1px;padding:8px 4px;
 cursor:pointer;text-align:center;transition:all 0.15s;line-height:1.3;}
 .cb:active{transform:scale(0.96);}
-.cb.r{color:var(–r)}.cb.y{color:var(–y)}.cb.b{color:var(–b)}.cb.d{color:var(–dim)}
+.cb.r{color:var(–r)}.cb.y{color:var(–y)}.cb.b{color:var(–b)}.cb.d{color:var(–dim)}.cb.o{color:var(–o)}
 .cb:hover{background:var(–bdr);filter:brightness(1.2);}
-
-.sr{display:flex;align-items:center;gap:8px;padding:5px 0;}
-.sr label{font-family:‘Share Tech Mono’,monospace;font-size:9px;color:var(–dim);letter-spacing:1px;width:75px;flex-shrink:0;}
-.sr input[type=range]{flex:1;accent-color:var(–g);height:3px;cursor:pointer;}
-.sr span{font-family:‘Share Tech Mono’,monospace;font-size:10px;color:var(–g);width:20px;text-align:right;}
-
-/* Event log */
-.ls{max-height:100px;overflow-y:auto;padding-right:2px;}
-.le{font-family:‘Share Tech Mono’,monospace;font-size:9px;padding:3px 0;
-border-bottom:1px solid var(–dim2);line-height:1.6;}
-.le.ok{color:var(–g2)}.le.info{color:var(–b)}.le.warn{color:var(–y)}.le.alert{color:var(–r)}.le.sys{color:var(–dim)}
+.cb.active-btn{border-color:var(–o);color:var(–o);}
+.zone-msg{font-family:‘Share Tech Mono’,monospace;font-size:9px;color:var(–o);
+letter-spacing:1px;text-align:center;padding:4px 0;display:none;}
+.zone-msg.show{display:block;}
 
 ::-webkit-scrollbar{width:3px;}
-::-webkit-scrollbar-track{background:transparent;}
 ::-webkit-scrollbar-thumb{background:var(–bdr2);}
 
-/* ── BOTTOM BAR ── */
-.bot{background:var(–p1);border-top:1px solid var(–bdr2);height:42px;flex-shrink:0;
-display:flex;align-items:center;justify-content:space-between;padding:0 14px;gap:10px;}
+/* BOTTOM BAR */
+.bot{background:var(–p1);border-top:1px solid var(–bdr2);height:40px;flex-shrink:0;
+display:flex;align-items:center;justify-content:space-between;padding:0 14px;}
 .ss{display:flex;align-items:center;gap:12px;}
 .si{font-family:‘Share Tech Mono’,monospace;font-size:9px;color:var(–dim);
 letter-spacing:1px;display:flex;align-items:center;gap:5px;}
 .dot{width:6px;height:6px;border-radius:50%;background:var(–dim);flex-shrink:0;}
 .dot.on{background:var(–g);box-shadow:0 0 6px var(–g);animation:glow 2s infinite;}
-.dot.w{background:var(–y);box-shadow:0 0 6px var(–y);animation:glow 0.5s infinite;}
-.dot.a{background:var(–r);box-shadow:0 0 6px var(–r);animation:glow 0.4s infinite;}
-.alm{font-family:‘Orbitron’,monospace;font-size:9px;font-weight:700;letter-spacing:2px;
-padding:4px 10px;border:1px solid var(–bdr);color:var(–dim);transition:all 0.3s;}
-.alm.on{color:var(–r);border-color:var(–r);background:rgba(255,23,68,0.05);animation:bk 0.4s infinite;}
+.dot.warn{background:var(–o);box-shadow:0 0 6px var(–o);animation:glow 0.5s infinite;}
+.dot.threat{background:var(–r);box-shadow:0 0 6px var(–r);animation:glow 0.4s infinite;}
+@keyframes glow{0%,100%{opacity:1}50%{opacity:0.5}}
+.bot-status{font-family:‘Orbitron’,monospace;font-size:9px;font-weight:700;letter-spacing:2px;color:var(–dim);}
+.bot-status.live{color:var(–g);text-shadow:0 0 8px rgba(0,255,136,0.4);}
 
 /* Responsive */
 @media(max-width:680px){
-.side{width:100%;max-height:200px;border-left:none;border-top:1px solid var(–bdr);}
+.side{width:100%;max-height:260px;border-left:none;border-top:1px solid var(–bdr);}
 .body{flex-direction:column;}
-.feed{min-height:220px;}
-.hdr-c{display:none;}
-.side .pnl:nth-child(n+4){display:none;}
+.feed{min-height:200px;}
+.hdr-center{display:none;}
+.pnl:nth-child(n+5){display:none;}
 }
 </style>
 
@@ -207,31 +219,31 @@ padding:4px 10px;border:1px solid var(–bdr);color:var(–dim);transition:all 0
 <!-- HEADER -->
 
 <header class="hdr">
-  <div class="hdr-l">
+  <div class="brand">
     <div class="emblem">
-      <svg viewBox="0 0 40 40" fill="none">
-        <circle cx="20" cy="20" r="18" stroke="#00ff88" stroke-width="1.5" opacity="0.8"/>
-        <circle cx="20" cy="20" r="11" stroke="#00cc66" stroke-width="1" opacity="0.45"/>
-        <circle cx="20" cy="20" r="3.5" fill="#00ff88"/>
-        <line x1="20" y1="2" x2="20" y2="9" stroke="#00ff88" stroke-width="1.5"/>
-        <line x1="20" y1="31" x2="20" y2="38" stroke="#00ff88" stroke-width="1.5"/>
-        <line x1="2" y1="20" x2="9" y2="20" stroke="#00ff88" stroke-width="1.5"/>
-        <line x1="31" y1="20" x2="38" y2="20" stroke="#00ff88" stroke-width="1.5"/>
-        <path d="M13 13 L20 9 L27 13 L27 27 L13 27 Z" stroke="#00cc66" stroke-width="0.8" fill="none" opacity="0.5"/>
+      <svg viewBox="0 0 40 40" fill="none" width="36" height="36">
+        <circle cx="20" cy="20" r="17" stroke="#00ff88" stroke-width="1.5" opacity="0.8"/>
+        <circle cx="20" cy="20" r="10" stroke="#00cc66" stroke-width="1" opacity="0.4"/>
+        <circle cx="20" cy="20" r="3" fill="#00ff88"/>
+        <line x1="20" y1="3" x2="20" y2="10" stroke="#00ff88" stroke-width="1.5"/>
+        <line x1="20" y1="30" x2="20" y2="37" stroke="#00ff88" stroke-width="1.5"/>
+        <line x1="3" y1="20" x2="10" y2="20" stroke="#00ff88" stroke-width="1.5"/>
+        <line x1="30" y1="20" x2="37" y2="20" stroke="#00ff88" stroke-width="1.5"/>
+        <path d="M13 13 L20 8 L27 13 L27 27 L13 27 Z" stroke="#00cc66" stroke-width="0.8" fill="none" opacity="0.45"/>
       </svg>
     </div>
-    <div class="brand">
+    <div class="brand-txt">
       <h1>DRISHTI</h1>
-      <p>14 SIKH LI &nbsp;·&nbsp; HQ 8 MTN DIV</p>
+      <p>14 SIKH LI · HQ 8 MTN DIV · DUAL-ENGINE SURVEILLANCE</p>
     </div>
   </div>
-  <div class="hdr-c">
+  <div class="hdr-center">
     <div class="badge" id="sysBadge">■ OFFLINE</div>
-    <div class="badge">HQ 8 MTN DIV · 2026-27</div>
+    <div class="badge v3">v3.0 · FACE+BODY</div>
   </div>
-  <div class="hdr-r">
+  <div class="hdr-right">
     <div class="clock" id="clk">--:--:--</div>
-    <div class="unit">14 SIKH LI &nbsp;·&nbsp; <span id="hDate2"></span></div>
+    <div class="hdr-sub" id="hDate">--/--/----</div>
   </div>
 </header>
 
@@ -249,28 +261,53 @@ padding:4px 10px;border:1px solid var(–bdr);color:var(–dim);transition:all 0
 <div class="brk tl"></div><div class="brk tr"></div>
 <div class="brk bl"></div><div class="brk br"></div>
 
-<div class="hud tl" id="hTL">CAM-01 · ESP32-CAM SIM<br>SECTOR: ALPHA · 18,000 FT<br>FPS: <span id="hFPS">--</span> · <span id="hRES">--</span></div>
-<div class="hud tr" id="hTR"><span id="hDate">--</span> IST<br>ENGINE: COCO-SSD v2<br>CONF: <span id="hConf">--</span>%</div>
-<div class="hud bl" id="hBL">PERSONS: <span id="hP">0</span><br>VEHICLES: <span id="hV">0</span><br>ANIMALS: <span id="hA">0</span></div>
-<div class="hud br" id="hBR">SPEED: <span id="hSpd">0</span> km/h<br>WEAPONS: <span id="hW">0</span><br>MOTION: <span id="hMot">CLEAR</span></div>
+<div class="hud tl">
+  CAM-01 · ESP32-CAM SIM<br>
+  SECTOR: ALPHA · 18,000 FT<br>
+  FPS: <span id="hFPS">--</span> · <span id="hRES">--×--</span>
+</div>
+<div class="hud tr">
+  <span id="hDate2">--/--/----</span> IST<br>
+  BODY: COCO-SSD · FACE: BLAZEFACE<br>
+  CONF: <span id="hConf">--</span>%
+</div>
+<div class="hud bl">
+  TRACKS: <span id="hTracks">0</span> · FACES: <span id="hFaces">0</span><br>
+  ZONE ALERTS: <span id="hZone">0</span><br>
+  TOTAL EVENTS: <span id="hAlerts">0</span>
+</div>
+<div class="hud br">
+  PERSONS: <span id="hP">0</span><br>
+  VEHICLES: <span id="hV">0</span><br>
+  THREAT: <span id="hThr">CLEAR</span>
+</div>
 
 <div class="thr-ban" id="thrBan"></div>
+<div class="thr-level" id="thrLevel" style="display:none;">
+  <div class="thr-level-fill" id="thrLevelFill"></div>
+</div>
 
 <!-- IDLE -->
 <div class="idle" id="idleScr">
   <div class="idle-ring">
     <svg viewBox="0 0 40 40" fill="none">
-      <circle cx="20" cy="20" r="16" stroke="#00ff88" stroke-width="1.5" opacity="0.35"/>
-      <circle cx="20" cy="20" r="8" stroke="#00cc66" stroke-width="1" opacity="0.25"/>
-      <circle cx="20" cy="20" r="3" fill="#00ff88" opacity="0.45"/>
-      <line x1="20" y1="4" x2="20" y2="12" stroke="#00ff88" stroke-width="1" opacity="0.45"/>
-      <line x1="20" y1="28" x2="20" y2="36" stroke="#00ff88" stroke-width="1" opacity="0.45"/>
-      <line x1="4" y1="20" x2="12" y2="20" stroke="#00ff88" stroke-width="1" opacity="0.45"/>
-      <line x1="28" y1="20" x2="36" y2="20" stroke="#00ff88" stroke-width="1" opacity="0.45"/>
+      <circle cx="20" cy="20" r="15" stroke="#00ff88" stroke-width="1.2" opacity="0.3"/>
+      <circle cx="20" cy="20" r="7" stroke="#00cc66" stroke-width="0.8" opacity="0.2"/>
+      <circle cx="20" cy="20" r="2.5" fill="#00ff88" opacity="0.4"/>
+      <line x1="20" y1="5" x2="20" y2="13" stroke="#00ff88" stroke-width="1" opacity="0.4"/>
+      <line x1="20" y1="27" x2="20" y2="35" stroke="#00ff88" stroke-width="1" opacity="0.4"/>
+      <line x1="5" y1="20" x2="13" y2="20" stroke="#00ff88" stroke-width="1" opacity="0.4"/>
+      <line x1="27" y1="20" x2="35" y2="20" stroke="#00ff88" stroke-width="1" opacity="0.4"/>
     </svg>
   </div>
-  <div class="idle-txt">DRISHTI SURVEILLANCE SYSTEM<br>ESP32-CAM FEED NOT INITIALIZED<br>AI DETECTION ENGINE: STANDBY<br><br>TAP ACTIVATE TO BEGIN SURVEILLANCE</div>
-  <button class="act-btn" id="actBtn">▶ ACTIVATE FEED</button>
+  <div class="idle-txt">
+    DRISHTI v3 SURVEILLANCE SYSTEM<br>
+    <span>DUAL AI ENGINE · BODY TRACKING + FACE DETECTION</span><br>
+    <span class="v3tag">▸ BLAZEFACE · COCO-SSD · KALMAN · NMS · IoU</span><br>
+    <span class="v3tag">▸ BEHAVIOUR-BASED THREAT SCORING</span><br><br>
+    ALLOW CAMERA ACCESS WHEN PROMPTED
+  </div>
+  <button class="act-btn" id="actBtn">▶ ACTIVATE DRISHTI v3</button>
 </div>
 
 <!-- LOADING -->
@@ -278,6 +315,7 @@ padding:4px 10px;border:1px solid var(–bdr);color:var(–dim);transition:all 0
   <div class="spin"></div>
   <div class="load-msg" id="loadMsg">INITIALIZING...</div>
   <div class="load-bar"><div class="load-fill" id="loadFill"></div></div>
+  <div class="load-step" id="loadStep">STANDBY</div>
 </div>
 ```
 
@@ -288,44 +326,98 @@ padding:4px 10px;border:1px solid var(–bdr);color:var(–dim);transition:all 0
   <aside class="side">
 
 ```
+<!-- THREAT ASSESSMENT PANEL -->
 <div class="pnl">
   <div class="pnl-h">THREAT ASSESSMENT</div>
-  <div class="ta standby" id="taDisp">STANDBY</div>
+  <div class="thr-score-wrap">
+    <div class="thr-score-num low" id="thrScore">0</div>
+    <div class="thr-score-right">
+      <div class="thr-score-label low" id="thrLabel">ALL CLEAR</div>
+      <div class="thr-bar-wrap">
+        <div class="thr-bar" id="thrBar" style="width:0%;background:var(--b);"></div>
+      </div>
+    </div>
+  </div>
+  <div class="thr-factors">
+    <div class="thr-factor-row">
+      <span>PERSONS DETECTED</span>
+      <span class="thr-factor-val clear" id="tfPersons">0</span>
+    </div>
+    <div class="thr-factor-row">
+      <span>FACES CONFIRMED</span>
+      <span class="thr-factor-val clear" id="tfFaces">0</span>
+    </div>
+    <div class="thr-factor-row">
+      <span>NIGHT / LOW LIGHT</span>
+      <span class="thr-factor-val clear" id="tfNight">NO</span>
+    </div>
+    <div class="thr-factor-row">
+      <span>RAPID MOVEMENT</span>
+      <span class="thr-factor-val clear" id="tfMove">NO</span>
+    </div>
+    <div class="thr-factor-row">
+      <span>GROUP SIZE > 2</span>
+      <span class="thr-factor-val clear" id="tfGroup">NO</span>
+    </div>
+    <div class="thr-factor-row">
+      <span>ZONE INTRUSION</span>
+      <span class="thr-factor-val clear" id="tfZone">NO</span>
+    </div>
+  </div>
 </div>
 
+<!-- DETECTION STATS -->
 <div class="pnl">
   <div class="pnl-h">DETECTION STATISTICS</div>
   <div class="sg">
-    <div class="sb"><span class="sl">PERSONS</span><div class="sv g" id="sP">0</div></div>
-    <div class="sb"><span class="sl">WEAPONS</span><div class="sv r" id="sW">0</div></div>
-    <div class="sb"><span class="sl">SPEED km/h</span><div class="sv b" id="sSp">0</div></div>
-    <div class="sb"><span class="sl">TOTAL ALERTS</span><div class="sv y" id="sAl">0</div></div>
+    <div class="sb"><span class="sl">PERSONS</span><div class="sv b" id="sP">0</div></div>
+    <div class="sb"><span class="sl">FACES</span><div class="sv g" id="sF">0</div></div>
+    <div class="sb"><span class="sl">VEHICLES</span><div class="sv y" id="sV">0</div></div>
+    <div class="sb"><span class="sl">TRACKS</span><div class="sv g" id="sTr">0</div></div>
+    <div class="sb"><span class="sl">ZONE HIT</span><div class="sv r" id="sZ">0</div></div>
+    <div class="sb"><span class="sl">EVENTS</span><div class="sv o" id="sEv">0</div></div>
   </div>
 </div>
 
-<div class="pnl">
-  <div class="pnl-h">MOVEMENT TRACKER</div>
-  <div id="mvLog"><div class="me"><span style="color:var(--dim)">AWAITING FIRST DETECTION...</span></div></div>
+<!-- ACTIVE TRACKS -->
+<div class="pnl grow" style="max-height:170px;">
+  <div class="pnl-h">ACTIVE TRACKS</div>
+  <div class="track-list" id="trackList">
+    <div class="track-item"><span style="color:var(--dim)">NO ACTIVE TRACKS</span></div>
+  </div>
 </div>
 
+<!-- CONTROLS -->
 <div class="pnl">
   <div class="pnl-h">SYSTEM CONTROLS</div>
-  <div class="sr">
-    <label>SENSITIVITY</label>
-    <input type="range" id="sensSl" min="1" max="10" value="5" oninput="setSens(this.value)">
-    <span id="sensV">5</span>
+  <div class="ctrl-row">
+    <label>BODY CONF</label>
+    <input type="range" id="confSl" min="30" max="90" value="50" oninput="setConf(this.value)">
+    <span id="confV">50%</span>
   </div>
-  <div class="cg" style="margin-top:6px;">
-    <button class="cb r" onclick="runSim('weapon')">⚠ WEAPON<br>SCENARIO</button>
-    <button class="cb y" onclick="runSim('logistics')">🎒 LOGISTICS<br>SCENARIO</button>
-    <button class="cb b" id="almBtn" onclick="toggleAlarm()">🔔 ALARM<br>ON</button>
-    <button class="cb d" onclick="doReset()">↺ RESET<br>SYSTEM</button>
+  <div class="ctrl-row">
+    <label>FACE CONF</label>
+    <input type="range" id="faceConfSl" min="50" max="95" value="70" oninput="setFaceConf(this.value)">
+    <span id="faceConfV">70%</span>
+  </div>
+  <div class="ctrl-row">
+    <label>TRAIL LEN</label>
+    <input type="range" id="trailSl" min="5" max="40" value="18" oninput="setTrail(this.value)">
+    <span id="trailV">18</span>
+  </div>
+  <div class="zone-msg" id="zoneMsg">◉ TAP FEED TO SET ZONE CORNERS</div>
+  <div class="btn-grid">
+    <button class="cb o" id="zoneBtn" onclick="toggleZoneDraw()">⬚ DRAW<br>ZONE</button>
+    <button class="cb r" onclick="clearZone()">✕ CLEAR<br>ZONE</button>
+    <button class="cb b" id="trailBtn" onclick="toggleTrails()">⟳ TRAILS<br>ON</button>
+    <button class="cb d" onclick="doReset()">↺ RESET<br>ALL</button>
   </div>
 </div>
 
-<div class="pnl" style="flex:1;overflow:hidden;">
+<!-- EVENT LOG -->
+<div class="pnl grow">
   <div class="pnl-h">EVENT LOG</div>
-  <div class="ls" id="evLog"></div>
+  <div class="alert-log" id="evLog"></div>
 </div>
 ```
 
@@ -337,473 +429,745 @@ padding:4px 10px;border:1px solid var(–bdr);color:var(–dim);transition:all 0
 <div class="bot">
   <div class="ss">
     <div class="si"><div class="dot" id="dCam"></div><span>CAM</span></div>
-    <div class="si"><div class="dot" id="dAI"></div><span>AI ENGINE</span></div>
-    <div class="si"><div class="dot" id="dMot"></div><span>MOTION</span></div>
-    <div class="si"><div class="dot" id="dThr"></div><span>THREAT</span></div>
+    <div class="si"><div class="dot" id="dBody"></div><span>BODY AI</span></div>
+    <div class="si"><div class="dot" id="dFace"></div><span>FACE AI</span></div>
+    <div class="si"><div class="dot" id="dZone"></div><span>ZONE</span></div>
   </div>
-  <div class="alm" id="almSt">● ALARM STANDBY</div>
+  <div class="bot-status" id="botStatus">■ SYSTEM OFFLINE</div>
   <div class="ss">
     <div class="si" id="bFPS">FPS: --</div>
-    <div class="si" id="bMdl">MODEL: OFFLINE</div>
-    <div class="si" id="bDate" style="color:var(--dim)"></div>
+    <div class="si" id="bModel">ENGINES: OFFLINE</div>
   </div>
 </div>
 
-</div><!-- /app -->
+</div>
 
 <script>
 'use strict';
 
-// ── OBJECT CLASSES ────────────────────────────────
+// ── CLASS SETS ────────────────────────────────────
 const PERSONS  = new Set(['person']);
 const VEHICLES = new Set(['bicycle','car','motorbike','bus','truck','boat','train','airplane']);
 const ANIMALS  = new Set(['bird','cat','dog','horse','sheep','cow','elephant','bear','zebra','giraffe']);
-// COCO-SSD cannot detect rifles/guns — not in its 80-class dataset.
-// Weapon detection on browser = impossible with COCO-SSD.
-// On Raspberry Pi: YOLOv8 custom weapons model will handle this.
-// For browser demo: use WEAPON SIM button to demonstrate enemy attack scenario.
-const WEAPONS  = new Set(['knife','baseball bat']);
-const BAGS     = new Set(['backpack','handbag','suitcase']);
-// These classes are IGNORED entirely — no box drawn, no alert
-const IGNORE   = new Set(['chair','couch','bed','dining table','toilet','tv','laptop','mouse',
-  'remote','keyboard','cell phone','microwave','oven','toaster','sink','refrigerator',
-  'book','clock','vase','scissors','teddy bear','hair drier','toothbrush',
-  'wine glass','cup','fork','knife_utensil','spoon','bowl','banana','apple',
-  'sandwich','orange','broccoli','carrot','hot dog','pizza','donut','cake',
-  'potted plant','mirror','bottle','sports ball','kite','baseball glove',
-  'skateboard','surfboard','tennis racket','frisbee','skis','snowboard',
-  'umbrella','tie','suitcase','handbag','backpack']);
+
+// ── DOM ───────────────────────────────────────────
+const $  = id => document.getElementById(id);
+const vid=$('vid'), ov=$('ov'), ctx=ov.getContext('2d');
 
 // ── STATE ─────────────────────────────────────────
-const $ = id => document.getElementById(id);
-const vid = $('vid'), ov = $('ov'), ctx = ov.getContext('2d');
-let model=null, running=false, simMode=null;
-let alarmOn=true, alarmFiring=false;
-let alertTotal=0, lastThreat='standby';
-let motionStart=null, lastCen=null, lastPreds=[];
-let audioCtx=null, beepH=null;
+let bodyModel=null, faceModel=null, running=false;
+let threshold=0.50, faceThreshold=0.70, trailLen=18, showTrails=true;
 let frameIdx=0, frameCount=0, fpsTimer=Date.now(), fps=0;
-let simH=null, prevFrame=null, sensitivity=5;
-let weaponFrameCount=0;
-const WEAPON_CONFIRM_FRAMES=4;
-// Motion hold: once motion/threat detected, hold state for min 3 seconds
-// This prevents the flickering on/off every frame
-let threatHoldTimer=null;
-let heldThreat='standby'; // the currently "held" threat shown to user
-const THREAT_HOLD_MS=3000; // hold any detected state for 3 seconds minimum
+let lastBodyPreds=[], lastFacePreds=[];
+let prevFrame=null;
+let totalEvents=0, zoneAlerts=0;
+let bannerTimer=null;
+const BANNER_HOLD=3500;
+
+// ── ZONE ──────────────────────────────────────────
+let zonePoints=[], zoneDrawMode=false, zoneActive=false;
+
+// ── TRACKER ───────────────────────────────────────
+let tracks=[], nextId=1;
+const freeIds=[];
+const MAX_MISSED=10, MIN_IOU=0.20;
+const TRAIL_COLORS=['#00b0ff','#00ff88','#ffd600','#ff9100','#b388ff','#00e5ff','#69f0ae','#ff6d00'];
+
+// ── THREAT STATE ──────────────────────────────────
+// Smooth threat score to avoid flickering
+let smoothThreatScore=0;
 
 // ── CLOCK ─────────────────────────────────────────
 function tick(){
   const n=new Date();
   $('clk').textContent=n.toTimeString().slice(0,8);
   const ds=n.toLocaleDateString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric'});
-  $('hDate').textContent=ds; $('bDate').textContent=ds+' IST';
-  if($('hDate2')) $('hDate2').textContent=ds;
+  $('hDate').textContent=ds; $('hDate2').textContent=ds;
 }
 setInterval(tick,1000); tick();
 
-// ── LOG ───────────────────────────────────────────
-function sysLog(msg,type='sys'){
-  const t=new Date().toTimeString().slice(0,8);
-  const d=document.createElement('div');
-  d.className=`le ${type}`; d.textContent=`[${t}] ${msg}`;
-  const l=$('evLog'); l.insertBefore(d,l.firstChild);
-  while(l.children.length>40) l.removeChild(l.lastChild);
-}
-
 // ── ACTIVATE ──────────────────────────────────────
 $('actBtn').addEventListener('click', activate);
-
 async function activate(){
   $('idleScr').style.display='none';
   const ls=$('loadScr'); ls.style.display='flex';
-  setLoad('REQUESTING CAMERA ACCESS...',8);
 
+  // Camera
+  setLoad('REQUESTING CAMERA…',5,'CAMERA INIT');
   try{
     let stream;
     try{
       stream=await navigator.mediaDevices.getUserMedia({
-        video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false
+        video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}},audio:false
       });
     }catch{
       stream=await navigator.mediaDevices.getUserMedia({video:true,audio:false});
     }
-
     vid.srcObject=stream; vid.style.display='block';
-    await new Promise(r=>{vid.onloadedmetadata=r;});
-    await vid.play();
-
-    function syncCv(){
+    await new Promise(r=>{vid.onloadedmetadata=r;}); await vid.play();
+    function syncCanvas(){
       ov.width=vid.videoWidth||vid.offsetWidth||640;
       ov.height=vid.videoHeight||vid.offsetHeight||480;
       $('hRES').textContent=`${ov.width}×${ov.height}`;
     }
-    syncCv(); new ResizeObserver(syncCv).observe(vid);
-    setLoad('CAMERA ACTIVE — LOADING AI MODEL...',30);
-
-    // Show HUDs
+    syncCanvas(); new ResizeObserver(syncCanvas).observe(vid);
     document.querySelectorAll('.brk,.hud').forEach(e=>e.style.display='block');
+    $('dCam').className='dot on';
+    ov.parentElement.addEventListener('click', handleZoneClick);
 
+    // TF.js
+    setLoad('TF.JS READY…',18,'TENSORFLOW INIT');
+    await window.tf.ready();
+
+    // Body model
+    setLoad('LOADING BODY DETECTION MODEL…',30,'COCO-SSD LITE_MOBILENET_V2');
     try{
-      await window.tf.ready();
-      setLoad('COMPILING NEURAL NETWORK...',60);
-      model=await cocoSsd.load({base:'mobilenet_v2'});
-      setLoad('AI MODEL READY — CALIBRATING...',88);
-      $('dAI').className='dot on'; $('bMdl').textContent='MODEL: COCO-SSD v2';
-      sysLog('AI engine loaded — COCO-SSD MobileNetV2','ok');
+      bodyModel=await cocoSsd.load({base:'lite_mobilenet_v2'});
+      $('dBody').className='dot on';
+      sysLog('Body engine loaded — COCO-SSD lite_mobilenet_v2','ok');
+    }catch(e){ sysLog('Body engine failed: '+e.message,'alert'); }
+
+    // Face model
+    setLoad('LOADING FACE DETECTION MODEL…',62,'BLAZEFACE — GOOGLE');
+    try{
+      faceModel=await blazeface.load();
+      $('dFace').className='dot on';
+      sysLog('Face engine loaded — BlazeFace (Google MediaPipe)','ok');
     }catch(e){
-      sysLog('AI model failed — motion-only mode','warn');
-      $('bMdl').textContent='MODEL: MOTION-ONLY';
+      sysLog('Face engine failed (offline?): '+e.message,'warn');
+      sysLog('Face counting will use body-only fallback','sys');
     }
 
-    setLoad('SYSTEM ACTIVE',100);
-    await new Promise(r=>setTimeout(r,350));
-    ls.style.display='none';
-    $('dCam').className='dot on';
-    $('sysBadge').textContent='■ SYSTEM ACTIVE'; $('sysBadge').classList.add('live');
-    running=true;
-    sysLog('DRISHTI surveillance system activated','ok');
-    sysLog('Post: Ganasok · Sector Alpha · Alt 18,000 ft','sys');
-    requestAnimationFrame(loop);
+    setLoad('INITIALISING TRACKER…',88,'KALMAN + IoU + NMS');
+    $('bModel').textContent='COCO-SSD + BLAZEFACE + MTT';
+    sysLog('Tracker: Kalman filter + IoU association + NMS merge','ok');
+    sysLog('Threat engine: behaviour-based scoring (6 factors)','ok');
+    sysLog('NOTE: Weapon detection requires YOLOv8 hardware phase','sys');
+    sysLog('Post: Ganasok · Sector Alpha · 18,000 ft','sys');
 
+    setLoad('DRISHTI v3 ACTIVE',100,'DUAL ENGINE READY');
+    await new Promise(r=>setTimeout(r,500));
+    ls.style.display='none';
+    $('thrLevel').style.display='block';
+    $('sysBadge').textContent='■ SURVEILLANCE ACTIVE'; $('sysBadge').classList.add('live');
+    $('botStatus').textContent='◉ DUAL ENGINE ACTIVE'; $('botStatus').classList.add('live');
+    running=true;
+    requestAnimationFrame(loop);
   }catch(err){
-    console.error(err);
-    setLoad('⚠ CAMERA DENIED\nOpen browser settings → Allow Camera',100);
-    sysLog('Camera denied — enable in browser settings','alert');
-    setTimeout(()=>{ls.style.display='none';$('idleScr').style.display='flex';},5000);
+    setLoad('⚠ CAMERA DENIED — Allow in browser settings',100,'ERROR');
+    setTimeout(()=>{ls.style.display='none';$('idleScr').style.display='flex';},4000);
+  }
+}
+function setLoad(m,p,s){
+  $('loadMsg').textContent=m;
+  $('loadFill').style.width=p+'%';
+  if(s) $('loadStep').textContent=s;
+}
+
+// ══════════════════════════════════════════════════
+// NON-MAXIMUM SUPPRESSION + BOX MERGE
+//
+// Problem solved: Two feet / partial body detections of
+// the SAME person produce multiple COCO-SSD boxes.
+// Solution: If two same-class boxes overlap > nmsThresh IoU,
+// merge them into one union box (not discard — merge gives
+// a larger complete bounding box).
+// Result: Left boot + right boot → one track, one ID.
+// ══════════════════════════════════════════════════
+function nmsAndMerge(rawDets, nmsThresh){
+  const sorted=[...rawDets].sort((a,b)=>b.conf-a.conf);
+  const kept=[];
+  sorted.forEach(d=>{
+    let merged=false;
+    for(let i=0;i<kept.length;i++){
+      if(kept[i].cls!==d.cls) continue;
+      if(iou(kept[i].bbox,d.bbox)>=nmsThresh){
+        // Union merge
+        const ax=Math.min(kept[i].bbox[0],d.bbox[0]);
+        const ay=Math.min(kept[i].bbox[1],d.bbox[1]);
+        const ax2=Math.max(kept[i].bbox[0]+kept[i].bbox[2],d.bbox[0]+d.bbox[2]);
+        const ay2=Math.max(kept[i].bbox[1]+kept[i].bbox[3],d.bbox[1]+d.bbox[3]);
+        kept[i].bbox=[ax,ay,ax2-ax,ay2-ay];
+        kept[i].conf=Math.max(kept[i].conf,d.conf);
+        merged=true; break;
+      }
+    }
+    if(!merged) kept.push({...d,bbox:[...d.bbox]});
+  });
+  return kept;
+}
+
+// ── IoU ───────────────────────────────────────────
+function iou(a,b){
+  const ax2=a[0]+a[2],ay2=a[1]+a[3],bx2=b[0]+b[2],by2=b[1]+b[3];
+  const ix1=Math.max(a[0],b[0]),iy1=Math.max(a[1],b[1]);
+  const ix2=Math.min(ax2,bx2),iy2=Math.min(ay2,by2);
+  if(ix2<ix1||iy2<iy1) return 0;
+  const inter=(ix2-ix1)*(iy2-iy1);
+  return inter/(a[2]*a[3]+b[2]*b[3]-inter);
+}
+
+// ══════════════════════════════════════════════════
+// KALMAN FILTER
+// ══════════════════════════════════════════════════
+class KalmanBox{
+  constructor(b){
+    this.x=[b[0],0];this.y=[b[1],0];this.w=[b[2],0];this.h=[b[3],0];
+    this.pN=0.1;this.mN=3.0;
+    this.Px=[1,0,0,10];this.Py=[1,0,0,10];this.Pw=[1,0,0,10];this.Ph=[1,0,0,10];
+  }
+  predict(){
+    this._p(this.x,this.Px);this._p(this.y,this.Py);
+    this._p(this.w,this.Pw);this._p(this.h,this.Ph);
+    return[this.x[0],this.y[0],this.w[0],this.h[0]];
+  }
+  update(b){
+    this._u(this.x,this.Px,b[0]);this._u(this.y,this.Py,b[1]);
+    this._u(this.w,this.Pw,b[2]);this._u(this.h,this.Ph,b[3]);
+    return[this.x[0],this.y[0],this.w[0],this.h[0]];
+  }
+  _p(s,P){
+    s[0]+=s[1];
+    const p00=P[0]+P[1]+P[2]+P[3]+this.pN,p01=P[1]+P[3],p10=P[2]+P[3],p11=P[3]+this.pN;
+    P[0]=p00;P[1]=p01;P[2]=p10;P[3]=p11;
+  }
+  _u(s,P,z){
+    const S=P[0]+this.mN,K0=P[0]/S,K1=P[2]/S,inn=z-s[0];
+    s[0]+=K0*inn;s[1]+=K1*inn;
+    P[0]=(1-K0)*P[0];P[1]=(1-K0)*P[1];P[2]=P[2]-K1*P[0];P[3]=P[3]-K1*P[1];
   }
 }
 
-function setLoad(m,p){ $('loadMsg').textContent=m; $('loadFill').style.width=p+'%'; }
+// ── TRACKER ───────────────────────────────────────
+function getNextId(){
+  return freeIds.length>0?freeIds.sort((a,b)=>a-b).shift():nextId++;
+}
+
+function updateTracker(detections){
+  tracks.forEach(t=>{t.predicted=t.kalman.predict();});
+  const matched=new Set(),usedDet=new Set(),pairs=[];
+  tracks.forEach((t,ti)=>{
+    detections.forEach((d,di)=>{
+      const s=iou(t.predicted,d.bbox);
+      if(s>=MIN_IOU) pairs.push({ti,di,s});
+    });
+  });
+  pairs.sort((a,b)=>b.s-a.s);
+  pairs.forEach(({ti,di})=>{
+    if(!matched.has(ti)&&!usedDet.has(di)){
+      matched.add(ti);usedDet.add(di);
+      const t=tracks[ti],d=detections[di];
+      t.bbox=t.kalman.update(d.bbox);t.cls=d.cls;t.conf=d.conf;
+      t.missed=0;t.age++;
+      t.trail.push({x:t.bbox[0]+t.bbox[2]/2,y:t.bbox[1]+t.bbox[3]/2});
+      if(t.trail.length>trailLen) t.trail.shift();
+      // Speed (px/frame, smoothed)
+      if(t.trail.length>=2){
+        const p1=t.trail[t.trail.length-2],p2=t.trail[t.trail.length-1];
+        const spd=Math.sqrt((p2.x-p1.x)**2+(p2.y-p1.y)**2);
+        t.speed=t.speed*0.7+spd*0.3; // EMA smoothing
+      }
+    }
+  });
+  tracks.forEach((t,ti)=>{
+    if(!matched.has(ti)){
+      t.missed++;t.bbox=t.predicted;
+      t.speed=t.speed*0.8; // decay speed when unmatched
+      t.trail.push({x:t.bbox[0]+t.bbox[2]/2,y:t.bbox[1]+t.bbox[3]/2});
+      if(t.trail.length>trailLen) t.trail.shift();
+    }
+  });
+  const killed=tracks.filter(t=>t.missed>=MAX_MISSED);
+  killed.forEach(t=>{ if(t.id<=20) freeIds.push(t.id); });
+  tracks=tracks.filter(t=>t.missed<MAX_MISSED);
+  detections.forEach((d,di)=>{
+    if(!usedDet.has(di)){
+      tracks.push({
+        id:getNextId(),cls:d.cls,conf:d.conf,
+        bbox:[...d.bbox],kalman:new KalmanBox(d.bbox),
+        predicted:[...d.bbox],
+        trail:[{x:d.bbox[0]+d.bbox[2]/2,y:d.bbox[1]+d.bbox[3]/2}],
+        age:1,missed:0,speed:0,
+        color:TRAIL_COLORS[(nextId-1)%TRAIL_COLORS.length],
+        zoneHitLogged:false
+      });
+    }
+  });
+  return tracks;
+}
+
+// ── ZONE ─────────────────────────────────────────
+function pointInZone(px,py){
+  if(zonePoints.length<3) return false;
+  let inside=false;
+  for(let i=0,j=zonePoints.length-1;i<zonePoints.length;j=i++){
+    const xi=zonePoints[i].x,yi=zonePoints[i].y,xj=zonePoints[j].x,yj=zonePoints[j].y;
+    if(((yi>py)!==(yj>py))&&(px<(xj-xi)*(py-yi)/(yj-yi)+xi)) inside=!inside;
+  }
+  return inside;
+}
+
+function handleZoneClick(e){
+  if(!zoneDrawMode) return;
+  const rect=ov.getBoundingClientRect();
+  const px=(e.clientX-rect.left)*(ov.width/rect.width);
+  const py=(e.clientY-rect.top)*(ov.height/rect.height);
+  if(zonePoints.length>=4){
+    finishZone(); return;
+  }
+  zonePoints.push({x:px,y:py});
+  sysLog(`Zone point ${zonePoints.length} set (${Math.round(px)},${Math.round(py)})`,'sys');
+  if(zonePoints.length===4) finishZone();
+}
+
+function finishZone(){
+  zoneDrawMode=false;zoneActive=true;
+  $('zoneBtn').classList.remove('active-btn');
+  $('zoneMsg').classList.remove('show');
+  $('dZone').className='dot warn';
+  sysLog('Restricted zone activated','warn');
+}
+function toggleZoneDraw(){
+  if(zoneDrawMode){zoneDrawMode=false;$('zoneBtn').classList.remove('active-btn');$('zoneMsg').classList.remove('show');return;}
+  zonePoints=[];zoneDrawMode=true;zoneActive=false;$('dZone').className='dot';
+  $('zoneBtn').classList.add('active-btn');$('zoneMsg').classList.add('show');
+  sysLog('Zone draw mode — tap 4 corners on feed','sys');
+}
+function clearZone(){
+  zonePoints=[];zoneDrawMode=false;zoneActive=false;$('dZone').className='dot';
+  $('zoneBtn').classList.remove('active-btn');$('zoneMsg').classList.remove('show');
+  sysLog('Restricted zone cleared','sys');
+}
+
+// ── MOTION ────────────────────────────────────────
+function getMotion(){
+  if(vid.readyState<2||ov.width<2) return{detected:false,level:0};
+  try{
+    const curr=ctx.getImageData(0,0,ov.width,ov.height);
+    if(!prevFrame){prevFrame=curr;return{detected:false,level:0};}
+    const d1=prevFrame.data,d2=curr.data;
+    let diff=0;
+    for(let i=0;i<d1.length;i+=16){
+      if(Math.abs(d1[i]-d2[i])+Math.abs(d1[i+1]-d2[i+1])+Math.abs(d1[i+2]-d2[i+2])>28) diff++;
+    }
+    prevFrame=curr;
+    return{detected:diff>15,level:Math.min(diff/80,1)};
+  }catch{return{detected:false,level:0};}
+}
+
+// ── LIGHT LEVEL (day/night estimation) ───────────
+function getLightLevel(){
+  // Sample a small area of the canvas for average brightness
+  try{
+    const sample=ctx.getImageData(ov.width/2-40,ov.height/2-40,80,80);
+    let sum=0;
+    for(let i=0;i<sample.data.length;i+=4){
+      sum+=(sample.data[i]+sample.data[i+1]+sample.data[i+2])/3;
+    }
+    return sum/(sample.data.length/4); // 0-255
+  }catch{return 128;}
+}
+
+// ══════════════════════════════════════════════════
+// BEHAVIOUR-BASED THREAT SCORING ENGINE
+//
+// Replaces the fake "armed" detection entirely.
+// COCO-SSD has no weapon classes. Claiming to detect
+// rifles with COCO-SSD is dishonest and unreliable.
+//
+// Instead, DRISHTI v3 uses a transparent, auditable
+// multi-factor threat score (0–100) based on observable
+// behaviours, exactly like professional surveillance
+// systems (Axis Guard, Bosch VideoSecurity, Milestone XProtect).
+//
+// The score feeds the banner — no single factor alone
+// triggers an alert, making false positives much harder.
+//
+// Factor weights:
+//   PERSONS ≥ 1          → +20 (baseline: intruder present)
+//   FACES confirmed       → +15 (face engine confirms real people)
+//   GROUP SIZE > 2        → +20 (group more threatening than solo)
+//   RAPID MOVEMENT        → +20 (running/fast approach)
+//   NIGHT / LOW LIGHT     → +15 (higher risk time)
+//   ZONE INTRUSION        → +10 (direct boundary violation)
+//   [max = 100]
+// ══════════════════════════════════════════════════
+function computeThreatScore(persons, faceCount, inZone, maxSpeed, lightLevel){
+  let score=0;
+  const factors={persons:false,faces:false,group:false,move:false,night:false,zone:false};
+
+  if(persons>=1){score+=20;factors.persons=true;}
+  if(faceCount>=1){score+=15;factors.faces=true;}
+  if(persons>2||faceCount>2){score+=20;factors.group=true;}
+  if(maxSpeed>8){score+=20;factors.move=true;}        // 8px/frame = brisk movement
+  if(lightLevel<60){score+=15;factors.night=true;}    // avg brightness < 60 = dark
+  if(inZone){score+=10;factors.zone=true;}
+
+  return{score:Math.min(score,100), factors};
+}
 
 // ── MAIN LOOP ─────────────────────────────────────
+let faceRunFrame=0;
 async function loop(){
   if(!running) return;
-
-  // FPS counter
   frameCount++;
   const now=Date.now();
-  if(now-fpsTimer>=1000){
-    fps=frameCount; frameCount=0; fpsTimer=now;
-    $('hFPS').textContent=fps; $('bFPS').textContent='FPS: '+fps;
-  }
+  if(now-fpsTimer>=1000){fps=frameCount;frameCount=0;fpsTimer=now;
+    $('hFPS').textContent=fps;$('bFPS').textContent='FPS:'+fps;}
 
-  // Draw live video every frame — this is what makes it feel live
   if(vid.readyState>=2){
     ov.width=vid.videoWidth||ov.width;
     ov.height=vid.videoHeight||ov.height;
     ctx.drawImage(vid,0,0,ov.width,ov.height);
   }
 
-  // Motion — every frame
   const motion=getMotion();
-
-  // AI — every 5th frame (balances accuracy vs framerate)
   frameIdx++;
-  if(model && simMode===null && frameIdx%5===0 && vid.readyState>=2){
-    try{ lastPreds=await model.detect(vid); }catch{ lastPreds=[]; }
+
+  // Body detection every 4 frames
+  if(bodyModel&&frameIdx%4===0&&vid.readyState>=2){
+    try{lastBodyPreds=await bodyModel.detect(vid);}catch{lastBodyPreds=[];}
   }
 
-  const preds = simMode ? simPreds(simMode) : lastPreds;
-  const counts = drawDetections(preds, motion);
-  classify(counts, motion, preds);
+  // Face detection every 6 frames (slightly less frequent — heavier)
+  faceRunFrame++;
+  if(faceModel&&faceRunFrame%6===0&&vid.readyState>=2){
+    try{
+      // BlazeFace returns faces with topLeft, bottomRight, landmarks, probability
+      const raw=await faceModel.estimateFaces(vid,false);
+      lastFacePreds=raw.filter(f=>f.probability[0]>=faceThreshold);
+    }catch{lastFacePreds=[];}
+  }
 
+  // Build body detections with NMS
+  const rawDets=[];
+  let maxConf=0;
+  lastBodyPreds.forEach(p=>{
+    if(p.score<threshold) return;
+    const c=p.class;
+    const isP=PERSONS.has(c),isV=VEHICLES.has(c),isA=ANIMALS.has(c);
+    if(!isP&&!isV&&!isA) return;
+    rawDets.push({bbox:p.bbox,cls:isP?'person':isV?'vehicle':'animal',conf:p.score});
+    if(p.score>maxConf) maxConf=p.score;
+  });
+  const dets=nmsAndMerge(rawDets,0.35);
+  const activeTracks=updateTracker(dets);
+
+  // Light level
+  const lightLevel=getLightLevel();
+
+  // Compute scene stats
+  let persons=0,vehicles=0,zoneIntrusion=false,maxSpeed=0;
+  activeTracks.forEach(t=>{
+    if(t.cls==='person') persons++;
+    else if(t.cls==='vehicle') vehicles++;
+    const cx=t.bbox[0]+t.bbox[2]/2,cy=t.bbox[1]+t.bbox[3]/2;
+    if(zoneActive&&pointInZone(cx,cy)){
+      zoneIntrusion=true;
+      if(!t.zoneHitLogged){
+        t.zoneHitLogged=true; zoneAlerts++;
+        sysLog(`ZONE BREACH: Track #${t.id} entered restricted zone`,'alert');
+        totalEvents++;
+      }
+    }
+    if(t.speed>maxSpeed) maxSpeed=t.speed;
+  });
+
+  const faceCount=lastFacePreds.length;
+
+  // Threat score
+  const {score,factors}=computeThreatScore(persons,faceCount,zoneIntrusion,maxSpeed,lightLevel);
+  // Smooth score (EMA) to prevent flickering
+  smoothThreatScore=smoothThreatScore*0.75+score*0.25;
+  const displayScore=Math.round(smoothThreatScore);
+
+  drawScene(activeTracks, motion, maxConf, faceCount, lightLevel);
+  updateThreatPanel(displayScore, factors, persons, faceCount, maxSpeed, zoneIntrusion, lightLevel);
+  updateSidebar(activeTracks);
+  updateBanner(displayScore, factors);
   requestAnimationFrame(loop);
 }
 
-// ── MOTION DETECTION ──────────────────────────────
-// Optimised for long-range outdoor detection (up to 50-80m in good light)
-function getMotion(){
-  if(vid.readyState<2||ov.width<2) return{detected:false,cx:0,cy:0,strength:0};
-  const curr=ctx.getImageData(0,0,ov.width,ov.height);
-  if(!prevFrame){prevFrame=curr;return{detected:false,cx:0,cy:0,strength:0};}
-  const d1=prevFrame.data,d2=curr.data;
-  // Lower threshold = picks up subtle distant movement
-  // sensitivity 1-10: at 5, threshold=22; at 10, threshold=11; at 1, threshold=44
-  const thresh=Math.max(8,(11-sensitivity)*8);
-  let diff=0,sx=0,sy=0; const W=ov.width;
-  // Sample every 4th pixel (denser sampling = catches small distant motion)
-  for(let i=0;i<d1.length;i+=16){
-    const delta=Math.abs(d1[i]-d2[i])+Math.abs(d1[i+1]-d2[i+1])+Math.abs(d1[i+2]-d2[i+2]);
-    if(delta>thresh){diff++;const idx=i/4;sx+=idx%W;sy+=Math.floor(idx/W);}
+// ── THREAT PANEL UPDATE ───────────────────────────
+function updateThreatPanel(score, factors, persons, faceCount, maxSpeed, inZone, light){
+  const level=score>=60?'high':score>=30?'medium':'low';
+  const labels={low:'ALL CLEAR',medium:'MONITOR SITUATION',high:'THREAT ELEVATED'};
+
+  $('thrScore').textContent=score;
+  $('thrScore').className='thr-score-num '+level;
+  $('thrLabel').textContent=labels[level];
+  $('thrLabel').className='thr-score-label '+level;
+
+  const barColors={low:'var(--b)',medium:'var(--o)',high:'var(--r)'};
+  $('thrBar').style.width=score+'%';
+  $('thrBar').style.background=barColors[level];
+
+  const fl=(val,active,cls='active')=>{el.className='thr-factor-val '+(val?cls:'clear');return el;};
+  function setFactor(id,active,text,cls='active'){
+    const el=$(id); el.textContent=text;
+    el.className='thr-factor-val '+(active?cls:'clear');
   }
-  prevFrame=curr;
-  // Lower minimum pixel count = detects distant/small movement
-  const minPx=Math.max(5,8-(sensitivity-1));
-  const det=diff>minPx;
-  return{detected:det,cx:det?sx/diff:0,cy:det?sy/diff:0,strength:diff};
+  setFactor('tfPersons',factors.persons,persons||'0');
+  setFactor('tfFaces',factors.faces,faceCount||'0');
+  setFactor('tfNight',factors.night,factors.night?'YES':'NO');
+  setFactor('tfMove',factors.move,factors.move?`${Math.round(maxSpeed)}px/f`:'NO');
+  setFactor('tfGroup',factors.group,factors.group?'YES':'NO','high');
+  setFactor('tfZone',factors.zone,factors.zone?'YES':'NO','high');
+
+  // Threat level bar at bottom of feed
+  const fill=$('thrLevelFill');
+  fill.style.width=score+'%';
+  fill.style.background=barColors[level];
+
+  // HUD
+  const thrTxt=score>=60?'HIGH':score>=30?'ELEVATED':'CLEAR';
+  $('hThr').textContent=thrTxt;
+  $('hThr').style.color=score>=60?'var(--r)':score>=30?'var(--o)':'var(--g)';
 }
 
-// ── DRAW DETECTIONS ───────────────────────────────
-function drawDetections(preds,motion){
-  let persons=0,weapons=0,bags=0,vehicles=0,animals=0,maxConf=0,speed=0;
+// ── BANNER ────────────────────────────────────────
+const BANNERS={
+  high:  {txt:'⚠  THREAT LEVEL: HIGH',  cls:'high'},
+  medium:{txt:'◉  SITUATION: MONITOR',   cls:'medium'},
+  low:   {txt:'●  PERSON DETECTED',      cls:'low'}
+};
+let lastBannerLevel=null;
+function updateBanner(score, factors){
+  const bn=$('thrBan');
+  let level=null;
+  if(score>=60) level='high';
+  else if(score>=30) level='medium';
+  else if(factors.persons) level='low';
 
-  preds.forEach(p=>{
-    if(p.score<0.62) return;
-    const[x,y,w,h]=p.bbox;
-    const c=p.class;
-
-    // ONLY process known relevant classes — ignore everything else (chair, bottle, etc.)
-    const isP=PERSONS.has(c);
-    const isV=VEHICLES.has(c);
-    const isA=ANIMALS.has(c);
-    const isW=WEAPONS.has(c);
-    const isB=BAGS.has(c);
-
-    // Skip anything not in our relevant categories
-    if(!isP && !isV && !isA && !isW && !isB) return;
-
-    if(isP)persons++;
-    if(isW)weapons++;
-    if(isB)bags++;
-    if(isV)vehicles++;
-    if(isA)animals++;
-    if(p.score>maxConf)maxConf=p.score;
-
-    const col=isW?'#ff1744':isP?'#00b0ff':isB?'#ffd600':isV?'#69f0ae':isA?'#ff9100':'#00b0ff';
-
-    // Filled box
-    ctx.fillStyle=col+'16'; ctx.fillRect(x,y,w,h);
-    ctx.strokeStyle=col; ctx.lineWidth=2; ctx.strokeRect(x,y,w,h);
-
-    // Circle for persons / weapons
-    if(isP||isW){
-      ctx.beginPath();
-      ctx.arc(x+w/2,y+h/2,Math.max(w,h)*0.63,0,Math.PI*2);
-      ctx.strokeStyle=col+'aa'; ctx.lineWidth=1.5;
-      ctx.setLineDash([7,4]); ctx.stroke(); ctx.setLineDash([]);
+  if(level){
+    const b=BANNERS[level];
+    clearTimeout(bannerTimer);
+    bn.textContent=b.txt;
+    bn.className=`thr-ban show ${b.cls}`;
+    if(level!==lastBannerLevel){
+      lastBannerLevel=level;
+      totalEvents++;
+      sysLog(b.txt.replace(/[⚠◉●]/g,'').trim(),level==='high'?'alert':level==='medium'?'warn':'info');
     }
+    bannerTimer=setTimeout(()=>{bn.className='thr-ban';lastBannerLevel=null;},BANNER_HOLD);
+  }
+}
 
-    // Corner ticks for vehicles/animals
-    if(isV||isA){
-      const tl=10;
-      [[x,y+tl,x,y,x+tl,y],[x+w-tl,y,x+w,y,x+w,y+tl],
-       [x,y+h-tl,x,y+h,x+tl,y+h],[x+w-tl,y+h,x+w,y+h,x+w,y+h-tl]].forEach(([ax,ay,bx,by,cx2,cy2])=>{
-        ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(bx,by);ctx.lineTo(cx2,cy2);
-        ctx.strokeStyle=col+'cc';ctx.lineWidth=2;ctx.stroke();
+// ── DRAW SCENE ────────────────────────────────────
+function drawScene(activeTracks, motion, maxConf, faceCount, lightLevel){
+
+  // ── Draw restricted zone ──
+  if(zonePoints.length>=2){
+    ctx.beginPath();
+    ctx.moveTo(zonePoints[0].x,zonePoints[0].y);
+    for(let i=1;i<zonePoints.length;i++) ctx.lineTo(zonePoints[i].x,zonePoints[i].y);
+    if(zoneActive&&zonePoints.length>=3) ctx.closePath();
+    ctx.strokeStyle=zoneActive?'rgba(255,145,0,0.9)':'rgba(255,145,0,0.5)';
+    ctx.setLineDash([8,4]);ctx.lineWidth=2;ctx.stroke();ctx.setLineDash([]);
+    if(zoneActive&&zonePoints.length>=3){
+      ctx.fillStyle='rgba(255,145,0,0.04)';ctx.fill();
+      const zcx=zonePoints.reduce((s,p)=>s+p.x,0)/zonePoints.length;
+      const zcy=zonePoints.reduce((s,p)=>s+p.y,0)/zonePoints.length;
+      ctx.font=`bold ${Math.max(10,ov.width*0.014)}px monospace`;
+      ctx.fillStyle='rgba(255,145,0,0.8)';
+      ctx.fillText('⬡ RESTRICTED ZONE',zcx-60,zcy);
+    }
+    if(zoneDrawMode){
+      zonePoints.forEach((p,i)=>{
+        ctx.beginPath();ctx.arc(p.x,p.y,5,0,Math.PI*2);
+        ctx.fillStyle='#ff9100';ctx.fill();
+        ctx.fillStyle='#000';ctx.font='bold 10px monospace';
+        ctx.fillText(i+1,p.x+7,p.y+4);
       });
     }
+  }
 
-    // Label
-    const fs=Math.max(11,ov.width*0.018);
-    ctx.font=`bold ${fs}px monospace`;
-    const lbl=`${c.toUpperCase()} ${Math.round(p.score*100)}%`;
-    const tw=ctx.measureText(lbl).width+10;
-    ctx.fillStyle=col; ctx.fillRect(x-1,y-fs-5,tw,fs+5);
-    ctx.fillStyle='#000'; ctx.fillText(lbl,x+4,y-3);
+  // ── Draw face detections (BlazeFace) ──
+  // Separate from body boxes — small tight boxes around faces only
+  // This gives the second count for partially hidden people
+  lastFacePreds.forEach((f,i)=>{
+    if(!f.topLeft||!f.bottomRight) return;
+    const fx=f.topLeft[0],fy=f.topLeft[1];
+    const fw=f.bottomRight[0]-fx,fh=f.bottomRight[1]-fy;
+    const fcx=fx+fw/2,fcy=fy+fh/2;
+
+    // Face box — tight, distinct style from body box
+    ctx.strokeStyle='rgba(0,255,136,0.9)';
+    ctx.lineWidth=1.5;
+    ctx.setLineDash([3,2]);
+    ctx.strokeRect(fx,fy,fw,fh);
+    ctx.setLineDash([]);
+    ctx.fillStyle='rgba(0,255,136,0.06)';
+    ctx.fillRect(fx,fy,fw,fh);
+
+    // Face label
+    const prob=Math.round((f.probability?f.probability[0]:0.9)*100);
+    const fls=Math.max(8,ov.width*0.012);
+    ctx.font=`${fls}px monospace`;
+    const lbl=`FACE-${i+1} ${prob}%`;
+    const lw=ctx.measureText(lbl).width+6;
+    ctx.fillStyle='rgba(0,255,136,0.85)';
+    ctx.fillRect(fx,fy-fls-4,lw,fls+4);
+    ctx.fillStyle='#000';
+    ctx.fillText(lbl,fx+3,fy-2);
+
+    // Small crosshair on face centre
+    const ch=6;
+    ctx.beginPath();
+    ctx.moveTo(fcx-ch,fcy);ctx.lineTo(fcx+ch,fcy);
+    ctx.moveTo(fcx,fcy-ch);ctx.lineTo(fcx,fcy+ch);
+    ctx.strokeStyle='rgba(0,255,136,0.6)';
+    ctx.lineWidth=1;ctx.stroke();
   });
 
-  // Motion circle when no AI detection
-  if(motion.detected&&persons===0&&vehicles===0&&animals===0){
-    const r=Math.min(52+motion.strength*0.38,95);
-    ctx.beginPath();ctx.arc(motion.cx,motion.cy,r,0,Math.PI*2);
-    ctx.strokeStyle='rgba(0,176,255,0.65)'; ctx.setLineDash([10,5]);
-    ctx.lineWidth=2; ctx.stroke(); ctx.setLineDash([]);
-    ctx.fillStyle='rgba(0,176,255,0.05)'; ctx.fill();
-    ctx.fillStyle='#00b0ff'; ctx.font=`bold ${Math.max(11,ov.width*0.018)}px monospace`;
-    ctx.fillText('MOTION DETECTED',motion.cx-55,motion.cy-r-7);
-  }
-
-  // Speed from centroid
-  if(preds.length>0&&preds[0].score>0.62){
-    const[x,y,w,h]=preds[0].bbox;
+  // ── Draw body tracks ──
+  activeTracks.forEach(t=>{
+    const[x,y,w,h]=t.bbox;
+    if(w<=0||h<=0) return;
     const cx=x+w/2,cy=y+h/2;
-    if(lastCen){const dx=cx-lastCen.x,dy=cy-lastCen.y;speed=Math.min(Math.round(Math.sqrt(dx*dx+dy*dy)*(fps||15)*0.036),120);}
-    lastCen={x:cx,y:cy};
-  }
+    const inZone=zoneActive&&pointInZone(cx,cy);
+    const isMoving=t.speed>8;
 
-  $('hP').textContent=persons; $('hV').textContent=vehicles;
-  $('hA').textContent=animals; $('hW').textContent=weapons;
-  $('hSpd').textContent=speed; $('hConf').textContent=maxConf>0?Math.round(maxConf*100):'--';
-  $('hMot').textContent=(motion.detected||persons>0)?'ACTIVE':'CLEAR';
-  $('dMot').className=(motion.detected||persons>0)?'dot on':'dot';
-  return{persons,weapons,bags,vehicles,animals,speed};
-}
+    const col=inZone?'#ff9100':
+      isMoving?'#ffd600':
+      t.cls==='person'?t.color:
+      t.cls==='vehicle'?'#ffd600':'#ff9100';
 
-// ── THREAT CLASSIFICATION ─────────────────────────
-// ═══════════════════════════════════════════════════════
-// DRISHTI — MULTI-SIGNAL ARMED PERSON DETECTION
-// Based on human body proportion science:
-//   Normal person w/h ratio = 0.26–0.45
-//   Arms out holding rifle  = 0.72–1.1
-//   AK-47 length = 87cm ≈ 35-40% of body height
-//   Upper body wider than lower = rifle held up
-// ═══════════════════════════════════════════════════════
-
-// ── ARMED DETECTION — lightweight, mobile-safe ────
-// Pixel reads (getImageData) inside detection loop crash mobile Safari.
-// Using only bbox geometry signals — no pixel reads inside loop.
-function detectArmedPerson(preds){
-  for(const p of preds){
-    if(p.class!=='person'||p.score<0.62) continue;
-    const[x,y,w,h]=p.bbox;
-    let score=0;
-    const ratio=w/h;
-    // Signal 1: combat-ready hold (arms fully extended with rifle)
-    if(ratio>0.72) score+=3;
-    // Signal 2: rifle slung on shoulder (one arm extended)
-    else if(ratio>0.54) score+=1;
-    // Signal 3: unusually tall bbox relative to frame = person close + arms up
-    const frameRatio=h/ov.height;
-    if(frameRatio>0.5&&ratio>0.50) score+=2;
-    // Score >= 4 = armed
-    if(score>=4) return true;
-  }
-  return false;
-}
-
-// ── THREAT CLASSIFICATION ─────────────────────────
-const THR_LABELS={standby:'STANDBY',motion:'MOTION ACTIVE',logistics:'LOGISTIC MVMT',enemy:'ENEMY ATTACK'};
-const BAN_TXT={enemy:'⚠  LIKELY ENEMY ATTACK',logistics:'⚡  LIKELY LOGISTIC MOVEMENT',motion:'◉  PERSON / MOTION DETECTED'};
-
-function setDisplayThreat(thr){
-  // Priority: enemy > logistics > motion > standby
-  // Only UPGRADE held threat, never downgrade until hold timer expires
-  const priority={standby:0,motion:1,logistics:2,enemy:3};
-  if(priority[thr]>=priority[heldThreat]){
-    heldThreat=thr;
-    clearTimeout(threatHoldTimer);
-    if(thr!=='standby'){
-      // Hold this threat state for THREAT_HOLD_MS before allowing downgrade
-      threatHoldTimer=setTimeout(()=>{
-        heldThreat='standby';
-      }, THREAT_HOLD_MS);
+    // ── Trail ──
+    if(showTrails&&t.trail.length>1){
+      for(let i=1;i<t.trail.length;i++){
+        const alpha=i/t.trail.length;
+        ctx.beginPath();
+        ctx.moveTo(t.trail[i-1].x,t.trail[i-1].y);
+        ctx.lineTo(t.trail[i].x,t.trail[i].y);
+        ctx.strokeStyle=col+(Math.round(alpha*180)).toString(16).padStart(2,'0');
+        ctx.lineWidth=Math.max(0.5,alpha*2);ctx.stroke();
+      }
+      const last=t.trail[t.trail.length-1];
+      ctx.beginPath();ctx.arc(last.x,last.y,2.5,0,Math.PI*2);
+      ctx.fillStyle=col;ctx.fill();
     }
-  }
-  // Always render heldThreat (not raw thr) — this stops flickering
-  const display=heldThreat;
-  const bn=$('thrBan');
-  if(display!=='standby'){
-    bn.textContent=BAN_TXT[display];
-    bn.className=`thr-ban show ${display}`;
-  } else {
-    bn.className='thr-ban';
-  }
-  const ta=$('taDisp');
-  ta.textContent=THR_LABELS[display];
-  ta.className=`ta ${display}`;
-  $('dThr').className=display==='enemy'?'dot a':display==='logistics'?'dot w':display==='motion'?'dot on':'dot';
-}
 
-function classify({persons,weapons,bags,vehicles,animals,speed},motion,preds){
-  let thr='standby';
+    // ── Bounding box — clean rectangle, no distracting circle ──
+    ctx.fillStyle=col+'14';ctx.fillRect(x,y,w,h);
+    ctx.strokeStyle=col;ctx.lineWidth=inZone?2.5:1.8;ctx.strokeRect(x,y,w,h);
 
-  if(persons>0||simMode){
-    if(!motionStart)motionStart=new Date();
-    if(weapons>0) weaponFrameCount++; else weaponFrameCount=0;
-    const weaponConfirmed=weaponFrameCount>=WEAPON_CONFIRM_FRAMES;
-    const armed=detectArmedPerson(preds);
-    if(weaponConfirmed||armed||simMode==='weapon') thr='enemy';
-    else if(bags>0||simMode==='logistics') thr='logistics';
-    else thr='motion';
-  } else if(motion.detected){
-    if(!motionStart)motionStart=new Date();
-    thr='motion';
-  } else{
-    motionStart=null; lastCen=null; weaponFrameCount=0;
-    if(heldThreat==='standby') stopAlarm();
-  }
-
-  setDisplayThreat(thr);
-
-  // Stats
-  $('sP').textContent=persons; $('sW').textContent=weapons; $('sSp').textContent=speed;
-
-  // Log + alarm on new threat
-  if(thr!=='standby'&&thr!==lastThreat){
-    lastThreat=thr;
-    alertTotal++; $('sAl').textContent=alertTotal;
-    const msgs={
-      enemy:`ALERT: ${persons} person(s) armed — ENEMY ATTACK`,
-      logistics:`WARN: ${persons} person(s) with bags — LOGISTIC MVMT`,
-      motion:'INFO: Motion / person detected in zone'
-    };
-    sysLog(msgs[thr]||'',thr==='enemy'?'alert':thr==='logistics'?'warn':'info');
-    addMvmt(thr,persons,weapons,speed);
-    if(thr==='enemy') triggerAlarm(); else stopAlarm();
-  } else if(thr==='standby'&&lastThreat!=='standby'){
-    lastThreat='standby';
-  }
-}
-
-// ── MOVEMENT LOG ──────────────────────────────────
-function addMvmt(type,persons,weapons,speed){
-  const now=new Date(),ts=now.toTimeString().slice(0,8);
-  const dur=motionStart?Math.round((now-motionStart)/1000):0;
-  const ml=$('mvLog'),d=document.createElement('div');
-  d.className=`me ${type}`;
-  d.innerHTML=`<span class="mt">${ts}</span>  STATUS: ${type.toUpperCase()}<br>PERSONS: ${persons} | WPN: ${weapons} | SPD: ${speed} km/h<br>DURATION: ${dur}s`;
-  ml.insertBefore(d,ml.firstChild);
-  while(ml.children.length>5)ml.removeChild(ml.lastChild);
-}
-
-// ── ALARM ─────────────────────────────────────────
-function triggerAlarm(){
-  if(!alarmOn||alarmFiring)return;
-  alarmFiring=true; $('almSt').textContent='▲ ALARM TRIGGERED'; $('almSt').className='alm on';
-  chirp();
-}
-function chirp(){
-  if(!alarmFiring||!alarmOn)return;
-  try{
-    if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();
-    [880,1100].forEach((f,i)=>{
-      const o=audioCtx.createOscillator(),g=audioCtx.createGain();
-      o.connect(g);g.connect(audioCtx.destination);
-      o.type='square';o.frequency.value=f;
-      const t=audioCtx.currentTime+i*0.14;
-      g.gain.setValueAtTime(0.16,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.12);
-      o.start(t);o.stop(t+0.13);
+    // ── Corner ticks (professional look, replaces big circles) ──
+    const tl=Math.min(w,h)*0.18, tw=inZone?2.5:2;
+    [[x,y+tl,x,y,x+tl,y],[x+w-tl,y,x+w,y,x+w,y+tl],
+     [x,y+h-tl,x,y+h,x+tl,y+h],[x+w-tl,y+h,x+w,y+h,x+w,y+h-tl]].forEach(([ax,ay,bx,by,cx2,cy2])=>{
+      ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(bx,by);ctx.lineTo(cx2,cy2);
+      ctx.strokeStyle=col+'ee';ctx.lineWidth=tw;ctx.stroke();
     });
-  }catch{}
-  beepH=setTimeout(chirp,850);
-}
-function stopAlarm(){
-  if(!alarmFiring)return; alarmFiring=false; clearTimeout(beepH);
-  $('almSt').textContent='● ALARM STANDBY'; $('almSt').className='alm';
-}
-function toggleAlarm(){
-  alarmOn=!alarmOn; $('almBtn').textContent=alarmOn?'🔔 ALARM\nON':'🔕 ALARM\nOFF';
-  if(!alarmOn)stopAlarm(); sysLog(`Alarm ${alarmOn?'enabled':'disabled'}`,'sys');
-}
 
-// ── SIMULATIONS ───────────────────────────────────
-function simPreds(type){
-  const cw=ov.width,ch=ov.height,t=Date.now()/1200;
-  const ox=Math.sin(t)*cw*0.04,oy=Math.cos(t*0.7)*ch*0.02;
-  const p=[
-    {class:'person',score:0.91,bbox:[cw*0.14+ox,ch*0.12+oy,cw*0.19,ch*0.62]},
-    {class:'person',score:0.87,bbox:[cw*0.54+ox,ch*0.18+oy,cw*0.18,ch*0.58]}
-  ];
-  if(type==='weapon'){
-    p.push({class:'baseball bat',score:0.76,bbox:[cw*0.22+ox,ch*0.52,cw*0.09,ch*0.22]});
-    p.push({class:'knife',score:0.71,bbox:[cw*0.61+ox,ch*0.56,cw*0.06,ch*0.16]});
-  } else {
-    p.push({class:'backpack',score:0.84,bbox:[cw*0.16+ox,ch*0.34,cw*0.13,ch*0.28]});
-    p.push({class:'suitcase',score:0.79,bbox:[cw*0.58+ox,ch*0.56,cw*0.11,ch*0.24]});
+    // ── Track label ──
+    const fs=Math.max(9,ov.width*0.013);
+    ctx.font=`bold ${fs}px monospace`;
+    const statusTxt=inZone?'⚠ZONE':isMoving?'MOVING':'';
+    const lbl=`#${t.id} ${t.cls.toUpperCase()}${statusTxt?' '+statusTxt:''}`;
+    const lw2=ctx.measureText(lbl).width+8;
+    ctx.fillStyle=col;ctx.fillRect(x-1,y-fs-5,lw2,fs+5);
+    ctx.fillStyle='#000';ctx.fillText(lbl,x+3,y-1);
+
+    // ── Confidence bar ──
+    const bw=Math.min(w,55);
+    ctx.fillStyle='rgba(0,0,0,0.5)';ctx.fillRect(x,y+h+2,bw,3);
+    ctx.fillStyle=col;ctx.fillRect(x,y+h+2,bw*(t.conf||0.7),3);
+
+    // ── Velocity arrow ──
+    if(t.trail.length>=3&&t.speed>3){
+      const t1=t.trail[t.trail.length-3],t2=t.trail[t.trail.length-1];
+      const vx=t2.x-t1.x,vy=t2.y-t1.y;
+      const spd=Math.sqrt(vx*vx+vy*vy);
+      if(spd>0.5){
+        const scale=Math.min(spd*1.8,35);
+        const ex=cx+vx/spd*scale,ey=cy+vy/spd*scale;
+        const angle=Math.atan2(vy,vx);
+        ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(ex,ey);
+        ctx.strokeStyle=col+'bb';ctx.lineWidth=1.5;ctx.stroke();
+        ctx.beginPath();ctx.moveTo(ex,ey);
+        ctx.lineTo(ex-7*Math.cos(angle-0.4),ey-7*Math.sin(angle-0.4));
+        ctx.lineTo(ex-7*Math.cos(angle+0.4),ey-7*Math.sin(angle+0.4));
+        ctx.closePath();ctx.fillStyle=col;ctx.fill();
+      }
+    }
+  });
+
+  // Motion only circle if no tracks
+  if(motion.detected&&activeTracks.length===0){
+    const cxm=ov.width/2,cym=ov.height/2;
+    ctx.beginPath();ctx.arc(cxm,cym,40,0,Math.PI*2);
+    ctx.strokeStyle='rgba(0,176,255,0.45)';ctx.setLineDash([6,4]);
+    ctx.lineWidth=1.2;ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle='rgba(0,176,255,0.03)';ctx.fill();
+    ctx.font=`bold ${Math.max(10,ov.width*0.014)}px monospace`;
+    ctx.fillStyle='#00b0ff';
+    ctx.fillText('MOTION DETECTED',cxm-58,cym-48);
   }
-  return p;
+
+  // ── HUD UPDATE ──
+  const persons=activeTracks.filter(t=>t.cls==='person').length;
+  const vehicles=activeTracks.filter(t=>t.cls==='vehicle').length;
+  $('hP').textContent=persons; $('hV').textContent=vehicles;
+  $('hTracks').textContent=activeTracks.length;
+  $('hFaces').textContent=faceCount;
+  $('hZone').textContent=zoneAlerts;
+  $('hAlerts').textContent=totalEvents;
+  $('hConf').textContent=maxConf>0?Math.round(maxConf*100):'--';
+  $('sP').textContent=persons; $('sV').textContent=vehicles;
+  $('sF').textContent=faceCount;
+  $('sTr').textContent=activeTracks.length;
+  $('sZ').textContent=zoneAlerts;
+  $('sEv').textContent=totalEvents;
+  $('dBody').className=activeTracks.length>0?'dot on':'dot on';
+  $('dFace').className=faceModel?'dot on':'dot warn';
 }
 
-function runSim(type){
-  simMode=type; clearTimeout(simH);
-  sysLog(`SIM: ${type==='weapon'?'Enemy attack':'Logistic movement'} scenario — 12s`,type==='weapon'?'alert':'warn');
-  simH=setTimeout(()=>{simMode=null;sysLog('Simulation ended — live detection resumed','sys');},12000);
+// ── SIDEBAR ───────────────────────────────────────
+let sbTimer=null;
+function updateSidebar(activeTracks){
+  clearTimeout(sbTimer);
+  sbTimer=setTimeout(()=>{
+    const tl=$('trackList');
+    if(!activeTracks.length){
+      tl.innerHTML='<div class="track-item"><span style="color:var(--dim)">NO ACTIVE TRACKS</span></div>';
+      return;
+    }
+    tl.innerHTML=activeTracks.map(t=>{
+      const inZone=zoneActive&&pointInZone(t.bbox[0]+t.bbox[2]/2,t.bbox[1]+t.bbox[3]/2);
+      const cls=inZone?'zone':t.cls;
+      const spd=Math.round(t.speed);
+      return `<div class="track-item ${cls}">
+        <span class="track-id">#${t.id}</span> ${t.cls.toUpperCase()}
+        <span class="ts ${inZone?'zone':'clear'}">${inZone?'⚠ZONE':'CLEAR'}</span><br>
+        CONF:${Math.round((t.conf||0.7)*100)}% · SPD:${spd}px/f · AGE:${t.age}f
+      </div>`;
+    }).join('');
+  },100);
 }
 
-// ── MISC ──────────────────────────────────────────
-function setSens(v){ sensitivity=parseInt(v); $('sensV').textContent=v; }
+// ── LOG ───────────────────────────────────────────
+function sysLog(msg,type='sys'){
+  const t=new Date().toTimeString().slice(0,8);
+  const d=document.createElement('div');
+  d.className=`al ${type}`;d.textContent=`[${t}] ${msg}`;
+  const l=$('evLog');l.insertBefore(d,l.firstChild);
+  while(l.children.length>50) l.removeChild(l.lastChild);
+}
 
+// ── CONTROLS ─────────────────────────────────────
+function setConf(v){threshold=v/100;$('confV').textContent=v+'%';}
+function setFaceConf(v){faceThreshold=v/100;$('faceConfV').textContent=v+'%';}
+function setTrail(v){trailLen=parseInt(v);$('trailV').textContent=v;}
+function toggleTrails(){showTrails=!showTrails;$('trailBtn').textContent=`⟳ TRAILS\n${showTrails?'ON':'OFF'}`;}
 function doReset(){
-  simMode=null;alertTotal=0;lastThreat='standby';motionStart=null;lastCen=null;lastPreds=[];weaponFrameCount=0;
-  heldThreat='standby'; clearTimeout(threatHoldTimer);
-  clearTimeout(simH);stopAlarm();
-  ['sP','sW','sSp'].forEach(id=>$(id).textContent='0'); $('sAl').textContent='0';
-  $('taDisp').textContent='STANDBY'; $('taDisp').className='ta standby';
+  tracks=[];nextId=1;freeIds.length=0;
+  totalEvents=0;zoneAlerts=0;smoothThreatScore=0;
+  lastBannerLevel=null;clearTimeout(bannerTimer);
   $('thrBan').className='thr-ban';
-  $('mvLog').innerHTML='<div class="me"><span style="color:var(--dim)">AWAITING DETECTION...</span></div>';
-  $('evLog').innerHTML=''; ['dMot','dThr'].forEach(id=>$(id).className='dot');
-  sysLog('System reset — all counters cleared','ok');
+  $('evLog').innerHTML='';
+  ['dBody','dFace'].forEach(id=>$(id).className='dot on');
+  sysLog('System reset — all tracks and counters cleared','ok');
 }
 </script>
 
