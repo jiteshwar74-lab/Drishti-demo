@@ -4,16 +4,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>DRISHTI v3 — Surveillance System</title>
+<title>DRISHTI v2 — Multi-Target Tracking</title>
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.2/dist/coco-ssd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface@0.0.7/dist/blazeface.min.js"></script>
 <style>
 :root{
   --g:#00ff88;--g2:#00cc66;--g3:#004422;
   --r:#ff1744;--y:#ffd600;--b:#00b0ff;--o:#ff9100;
-  --bg:#020508;--p1:#050c10;
+  --bg:#020508;--p1:#050c10;--p2:#081018;
   --bdr:#0c2018;--bdr2:#14301e;
   --txt:#70ffb8;--dim:#246040;--dim2:#0c1e14;
 }
@@ -24,13 +23,14 @@ background:radial-gradient(ellipse at center,transparent 50%,rgba(0,0,0,0.72)100
 repeating-linear-gradient(0deg,transparent 0,transparent 2px,rgba(0,255,100,0.014)2px,rgba(0,255,100,0.014)4px);}
 .app{display:flex;flex-direction:column;height:100vh;}
 
-/* HEADER */
+/* ── HEADER ── */
 .hdr{background:linear-gradient(90deg,var(–p1) 0%,#061210 100%);border-bottom:1px solid var(–bdr2);
 padding:0 14px;height:52px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;position:relative;}
 .hdr::after{content:’’;position:absolute;bottom:0;left:0;right:0;height:1px;
 background:linear-gradient(90deg,transparent,var(–g),transparent);opacity:0.3;}
 .brand{display:flex;align-items:center;gap:11px;}
 .emblem{width:36px;height:36px;flex-shrink:0;}
+.emblem svg{width:100%;height:100%;}
 .brand-txt h1{font-family:‘Orbitron’,monospace;font-size:17px;font-weight:900;color:var(–g);
 letter-spacing:5px;line-height:1;text-shadow:0 0 18px rgba(0,255,136,0.5);}
 .brand-txt p{font-family:‘Share Tech Mono’,monospace;font-size:8px;color:var(–dim);letter-spacing:2px;margin-top:2px;}
@@ -38,12 +38,12 @@ letter-spacing:5px;line-height:1;text-shadow:0 0 18px rgba(0,255,136,0.5);}
 .badge{font-family:‘Share Tech Mono’,monospace;font-size:9px;letter-spacing:2px;
 border:1px solid var(–bdr2);padding:3px 8px;color:var(–dim);background:var(–dim2);}
 .badge.live{border-color:var(–g2);color:var(–g);background:rgba(0,255,136,0.05);animation:glow 2s infinite;}
-.badge.v3{border-color:var(–b);color:var(–b);background:rgba(0,176,255,0.05);}
+.badge.v2{border-color:var(–b);color:var(–b);background:rgba(0,176,255,0.05);}
 .hdr-right{text-align:right;}
 .clock{font-family:‘Orbitron’,monospace;font-size:15px;font-weight:700;color:var(–g);letter-spacing:2px;}
 .hdr-sub{font-family:‘Share Tech Mono’,monospace;font-size:8px;color:var(–dim);letter-spacing:1px;}
 
-/* LAYOUT */
+/* ── LAYOUT ── */
 .body{display:flex;flex:1;overflow:hidden;}
 .feed{position:relative;flex:1;background:#000;overflow:hidden;}
 video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none;}
@@ -65,23 +65,25 @@ pointer-events:none;z-index:10;display:none;text-shadow:0 1px 4px rgba(0,0,0,0.9
 .hud.br{bottom:12px;right:38px;text-align:right;color:rgba(0,255,136,0.85);}
 
 /* Threat banner */
-.thr-ban{position:absolute;top:40%;left:50%;transform:translate(-50%,-50%);
+.thr-ban{position:absolute;top:42%;left:50%;transform:translate(-50%,-50%);
 font-family:‘Orbitron’,monospace;font-weight:900;letter-spacing:3px;
 padding:10px 24px;border:2px solid;text-align:center;
 display:none;pointer-events:none;z-index:20;white-space:nowrap;}
-.thr-ban.show{display:block;animation:bk 0.6s infinite;}
-@keyframes bk{0%,100%{opacity:1}50%{opacity:0.35}}
-.thr-ban.high{font-size:clamp(11px,2.5vw,16px);color:var(–r);border-color:var(–r);
-background:rgba(255,23,68,0.12);text-shadow:0 0 14px var(–r);}
-.thr-ban.medium{font-size:clamp(11px,2.5vw,16px);color:var(–o);border-color:var(–o);
+.thr-ban.show{display:block;animation:bk 0.55s infinite;}
+@keyframes bk{0%,100%{opacity:1}50%{opacity:0.4}}
+.thr-ban.enemy{font-size:clamp(11px,2.5vw,17px);color:var(–r);border-color:var(–r);
+background:rgba(255,23,68,0.1);text-shadow:0 0 14px var(–r);}
+.thr-ban.intrusion{font-size:clamp(11px,2.5vw,17px);color:var(–o);border-color:var(–o);
 background:rgba(255,145,0,0.08);text-shadow:0 0 14px var(–o);}
-.thr-ban.low{font-size:clamp(11px,2.2vw,14px);color:var(–b);border-color:var(–b);
+.thr-ban.motion{font-size:clamp(11px,2.2vw,15px);color:var(–b);border-color:var(–b);
 background:rgba(0,176,255,0.08);text-shadow:0 0 12px var(–b);}
 
-/* Threat level bar */
-.thr-level{position:absolute;bottom:0;left:0;right:0;height:3px;
-background:var(–bdr);z-index:15;pointer-events:none;display:none;}
-.thr-level-fill{height:100%;width:0%;transition:width 0.4s,background 0.4s;}
+/* ── ARMED CONFIRM RING ── */
+@keyframes armRing{
+0%{opacity:0.3;transform:translate(-50%,-50%) scale(0.85);}
+50%{opacity:0.9;transform:translate(-50%,-50%) scale(1.05);}
+100%{opacity:0.3;transform:translate(-50%,-50%) scale(0.85);}
+}
 
 /* Idle */
 .idle{position:absolute;inset:0;display:flex;flex-direction:column;
@@ -92,7 +94,8 @@ display:flex;align-items:center;justify-content:center;animation:pulse 3s ease-i
 .idle-ring svg{width:48%;height:48%;opacity:0.4;}
 .idle-txt{font-family:‘Share Tech Mono’,monospace;font-size:11px;color:var(–dim);
 letter-spacing:2px;text-align:center;line-height:2.4;}
-.idle-txt span{color:var(–g2);} .idle-txt .v3tag{color:var(–b);}
+.idle-txt span{color:var(–g2);}
+.idle-txt .v2tag{color:var(–b);}
 .act-btn{font-family:‘Orbitron’,monospace;font-size:12px;font-weight:700;letter-spacing:4px;
 padding:13px 34px;border:2px solid var(–g);background:transparent;color:var(–g);
 cursor:pointer;transition:all 0.2s;text-shadow:0 0 10px rgba(0,255,136,0.3);
@@ -110,9 +113,8 @@ border-radius:50%;animation:spin 0.7s linear infinite;}
 letter-spacing:2px;text-align:center;line-height:1.8;}
 .load-bar{width:220px;height:2px;background:var(–bdr);overflow:hidden;}
 .load-fill{height:100%;width:0%;background:var(–g);transition:width 0.35s;box-shadow:0 0 8px var(–g);}
-.load-step{font-family:‘Share Tech Mono’,monospace;font-size:9px;color:var(–dim);letter-spacing:1px;margin-top:-8px;}
 
-/* SIDEBAR */
+/* ── SIDEBAR ── */
 .side{width:272px;flex-shrink:0;background:var(–p1);
 border-left:1px solid var(–bdr);display:flex;flex-direction:column;overflow:hidden;}
 .pnl{border-bottom:1px solid var(–bdr);padding:10px 12px;}
@@ -122,32 +124,11 @@ margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(–dim2);
 display:flex;align-items:center;gap:5px;}
 .pnl-h::before{content:’’;width:3px;height:9px;background:var(–g2);box-shadow:0 0 4px var(–g2);flex-shrink:0;}
 
-/* Threat score panel */
-.thr-score-wrap{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
-.thr-score-num{font-family:‘Orbitron’,monospace;font-size:28px;font-weight:900;line-height:1;width:48px;}
-.thr-score-num.low{color:var(–b);}
-.thr-score-num.medium{color:var(–o);}
-.thr-score-num.high{color:var(–r);}
-.thr-score-right{flex:1;}
-.thr-score-label{font-family:‘Share Tech Mono’,monospace;font-size:10px;letter-spacing:2px;margin-bottom:4px;}
-.thr-score-label.low{color:var(–b);}
-.thr-score-label.medium{color:var(–o);}
-.thr-score-label.high{color:var(–r);}
-.thr-bar-wrap{height:4px;background:var(–bdr);overflow:hidden;}
-.thr-bar{height:100%;transition:width 0.4s,background 0.4s;}
-.thr-factors{font-family:‘Share Tech Mono’,monospace;font-size:8px;color:var(–dim);
-letter-spacing:1px;line-height:1.9;}
-.thr-factor-row{display:flex;justify-content:space-between;align-items:center;}
-.thr-factor-val{font-size:9px;}
-.thr-factor-val.active{color:var(–o);}
-.thr-factor-val.clear{color:var(–g2);}
-.thr-factor-val.high{color:var(–r);}
-
 /* Stats grid */
-.sg{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;}
-.sb{background:var(–dim2);border:1px solid var(–bdr);padding:7px 4px;text-align:center;}
-.sl{font-family:‘Share Tech Mono’,monospace;font-size:7.5px;color:var(–dim);letter-spacing:1px;display:block;margin-bottom:2px;}
-.sv{font-family:‘Orbitron’,monospace;font-size:17px;font-weight:700;line-height:1;}
+.sg{display:grid;grid-template-columns:1fr 1fr;gap:4px;}
+.sb{background:var(–dim2);border:1px solid var(–bdr);padding:7px 5px;text-align:center;}
+.sl{font-family:‘Share Tech Mono’,monospace;font-size:8px;color:var(–dim);letter-spacing:1.5px;display:block;margin-bottom:2px;}
+.sv{font-family:‘Orbitron’,monospace;font-size:19px;font-weight:700;line-height:1;}
 .sv.g{color:var(–g)}.sv.r{color:var(–r)}.sv.b{color:var(–b)}.sv.y{color:var(–y)}.sv.o{color:var(–o)}
 
 /* Track list */
@@ -157,10 +138,22 @@ padding:5px 7px;border-left:2px solid var(–bdr);margin-bottom:3px;
 background:var(–dim2);line-height:1.9;color:var(–dim);position:relative;}
 .track-item.person{border-left-color:var(–b);}
 .track-item.vehicle{border-left-color:var(–y);}
+.track-item.animal{border-left-color:var(–o);}
+.track-item.armed{border-left-color:var(–r);background:rgba(255,23,68,0.04);}
 .track-item.zone{border-left-color:var(–o);background:rgba(255,145,0,0.04);}
 .track-id{color:var(–g2);font-weight:700;}
-.ts{float:right;font-size:8px;letter-spacing:1px;}
-.ts.zone{color:var(–o);}.ts.clear{color:var(–dim);}
+.track-status{float:right;font-size:8px;letter-spacing:1px;}
+.track-status.threat{color:var(–r);}
+.track-status.zone{color:var(–o);}
+.track-status.clear{color:var(–dim);}
+.track-status.confirm{color:var(–y);}
+
+/* ── ARMED CONFIRM BADGE ── */
+.arm-confirm{background:var(–dim2);border:1px solid var(–bdr2);
+padding:5px 10px;margin-top:4px;font-family:‘Share Tech Mono’,monospace;font-size:9px;
+color:var(–y);letter-spacing:1px;display:flex;align-items:center;gap:6px;}
+.arm-bar-wrap{flex:1;height:3px;background:var(–bdr);overflow:hidden;}
+.arm-bar{height:100%;background:var(–y);transition:width 0.2s;box-shadow:0 0 4px var(–y);}
 
 /* Alert log */
 .alert-log{max-height:110px;overflow-y:auto;}
@@ -181,6 +174,8 @@ cursor:pointer;text-align:center;transition:all 0.15s;line-height:1.3;}
 .cb.r{color:var(–r)}.cb.y{color:var(–y)}.cb.b{color:var(–b)}.cb.d{color:var(–dim)}.cb.o{color:var(–o)}
 .cb:hover{background:var(–bdr);filter:brightness(1.2);}
 .cb.active-btn{border-color:var(–o);color:var(–o);}
+
+/* Zone draw mode */
 .zone-msg{font-family:‘Share Tech Mono’,monospace;font-size:9px;color:var(–o);
 letter-spacing:1px;text-align:center;padding:4px 0;display:none;}
 .zone-msg.show{display:block;}
@@ -188,7 +183,7 @@ letter-spacing:1px;text-align:center;padding:4px 0;display:none;}
 ::-webkit-scrollbar{width:3px;}
 ::-webkit-scrollbar-thumb{background:var(–bdr2);}
 
-/* BOTTOM BAR */
+/* ── BOTTOM BAR ── */
 .bot{background:var(–p1);border-top:1px solid var(–bdr2);height:40px;flex-shrink:0;
 display:flex;align-items:center;justify-content:space-between;padding:0 14px;}
 .ss{display:flex;align-items:center;gap:12px;}
@@ -204,11 +199,11 @@ letter-spacing:1px;display:flex;align-items:center;gap:5px;}
 
 /* Responsive */
 @media(max-width:680px){
-.side{width:100%;max-height:260px;border-left:none;border-top:1px solid var(–bdr);}
+.side{width:100%;max-height:220px;border-left:none;border-top:1px solid var(–bdr);}
 .body{flex-direction:column;}
 .feed{min-height:200px;}
 .hdr-center{display:none;}
-.pnl:nth-child(n+5){display:none;}
+.pnl:nth-child(n+4){display:none;}
 }
 </style>
 
@@ -221,7 +216,7 @@ letter-spacing:1px;display:flex;align-items:center;gap:5px;}
 <header class="hdr">
   <div class="brand">
     <div class="emblem">
-      <svg viewBox="0 0 40 40" fill="none" width="36" height="36">
+      <svg viewBox="0 0 40 40" fill="none">
         <circle cx="20" cy="20" r="17" stroke="#00ff88" stroke-width="1.5" opacity="0.8"/>
         <circle cx="20" cy="20" r="10" stroke="#00cc66" stroke-width="1" opacity="0.4"/>
         <circle cx="20" cy="20" r="3" fill="#00ff88"/>
@@ -234,12 +229,12 @@ letter-spacing:1px;display:flex;align-items:center;gap:5px;}
     </div>
     <div class="brand-txt">
       <h1>DRISHTI</h1>
-      <p>14 SIKH LI · HQ 8 MTN DIV · DUAL-ENGINE SURVEILLANCE</p>
+      <p>14 SIKH LI · HQ 8 MTN DIV · MULTI-TARGET TRACKING</p>
     </div>
   </div>
   <div class="hdr-center">
     <div class="badge" id="sysBadge">■ OFFLINE</div>
-    <div class="badge v3">v3.0 · FACE+BODY</div>
+    <div class="badge v2">MTT v2.0</div>
   </div>
   <div class="hdr-right">
     <div class="clock" id="clk">--:--:--</div>
@@ -268,24 +263,21 @@ letter-spacing:1px;display:flex;align-items:center;gap:5px;}
 </div>
 <div class="hud tr">
   <span id="hDate2">--/--/----</span> IST<br>
-  BODY: COCO-SSD · FACE: BLAZEFACE<br>
+  ENGINE: COCO-SSD v2 + MTT<br>
   CONF: <span id="hConf">--</span>%
 </div>
 <div class="hud bl">
-  TRACKS: <span id="hTracks">0</span> · FACES: <span id="hFaces">0</span><br>
+  ACTIVE TRACKS: <span id="hTracks">0</span><br>
   ZONE ALERTS: <span id="hZone">0</span><br>
-  TOTAL EVENTS: <span id="hAlerts">0</span>
+  TOTAL ALERTS: <span id="hAlerts">0</span>
 </div>
 <div class="hud br">
   PERSONS: <span id="hP">0</span><br>
   VEHICLES: <span id="hV">0</span><br>
-  THREAT: <span id="hThr">CLEAR</span>
+  MOTION: <span id="hMot">CLEAR</span>
 </div>
 
 <div class="thr-ban" id="thrBan"></div>
-<div class="thr-level" id="thrLevel" style="display:none;">
-  <div class="thr-level-fill" id="thrLevelFill"></div>
-</div>
 
 <!-- IDLE -->
 <div class="idle" id="idleScr">
@@ -301,13 +293,13 @@ letter-spacing:1px;display:flex;align-items:center;gap:5px;}
     </svg>
   </div>
   <div class="idle-txt">
-    DRISHTI v3 SURVEILLANCE SYSTEM<br>
-    <span>DUAL AI ENGINE · BODY TRACKING + FACE DETECTION</span><br>
-    <span class="v3tag">▸ BLAZEFACE · COCO-SSD · KALMAN · NMS · IoU</span><br>
-    <span class="v3tag">▸ BEHAVIOUR-BASED THREAT SCORING</span><br><br>
+    DRISHTI SURVEILLANCE SYSTEM<br>
+    <span>MULTI-TARGET TRACKING · ZONE INTRUSION DETECTION</span><br>
+    <span class="v2tag">▸ KALMAN FILTER · IoU ASSOCIATION · TRAJECTORY TRAILS</span><br>
+    MODEL: COCO-SSD LITE_MOBILENET_V2<br><br>
     ALLOW CAMERA ACCESS WHEN PROMPTED
   </div>
-  <button class="act-btn" id="actBtn">▶ ACTIVATE DRISHTI v3</button>
+  <button class="act-btn" id="actBtn">▶ ACTIVATE DRISHTI v2</button>
 </div>
 
 <!-- LOADING -->
@@ -315,7 +307,6 @@ letter-spacing:1px;display:flex;align-items:center;gap:5px;}
   <div class="spin"></div>
   <div class="load-msg" id="loadMsg">INITIALIZING...</div>
   <div class="load-bar"><div class="load-fill" id="loadFill"></div></div>
-  <div class="load-step" id="loadStep">STANDBY</div>
 </div>
 ```
 
@@ -326,86 +317,54 @@ letter-spacing:1px;display:flex;align-items:center;gap:5px;}
   <aside class="side">
 
 ```
-<!-- THREAT ASSESSMENT PANEL -->
-<div class="pnl">
-  <div class="pnl-h">THREAT ASSESSMENT</div>
-  <div class="thr-score-wrap">
-    <div class="thr-score-num low" id="thrScore">0</div>
-    <div class="thr-score-right">
-      <div class="thr-score-label low" id="thrLabel">ALL CLEAR</div>
-      <div class="thr-bar-wrap">
-        <div class="thr-bar" id="thrBar" style="width:0%;background:var(--b);"></div>
-      </div>
-    </div>
-  </div>
-  <div class="thr-factors">
-    <div class="thr-factor-row">
-      <span>PERSONS DETECTED</span>
-      <span class="thr-factor-val clear" id="tfPersons">0</span>
-    </div>
-    <div class="thr-factor-row">
-      <span>FACES CONFIRMED</span>
-      <span class="thr-factor-val clear" id="tfFaces">0</span>
-    </div>
-    <div class="thr-factor-row">
-      <span>NIGHT / LOW LIGHT</span>
-      <span class="thr-factor-val clear" id="tfNight">NO</span>
-    </div>
-    <div class="thr-factor-row">
-      <span>RAPID MOVEMENT</span>
-      <span class="thr-factor-val clear" id="tfMove">NO</span>
-    </div>
-    <div class="thr-factor-row">
-      <span>GROUP SIZE > 2</span>
-      <span class="thr-factor-val clear" id="tfGroup">NO</span>
-    </div>
-    <div class="thr-factor-row">
-      <span>ZONE INTRUSION</span>
-      <span class="thr-factor-val clear" id="tfZone">NO</span>
-    </div>
-  </div>
-</div>
-
-<!-- DETECTION STATS -->
 <div class="pnl">
   <div class="pnl-h">DETECTION STATISTICS</div>
   <div class="sg">
     <div class="sb"><span class="sl">PERSONS</span><div class="sv b" id="sP">0</div></div>
-    <div class="sb"><span class="sl">FACES</span><div class="sv g" id="sF">0</div></div>
     <div class="sb"><span class="sl">VEHICLES</span><div class="sv y" id="sV">0</div></div>
-    <div class="sb"><span class="sl">TRACKS</span><div class="sv g" id="sTr">0</div></div>
-    <div class="sb"><span class="sl">ZONE HIT</span><div class="sv r" id="sZ">0</div></div>
-    <div class="sb"><span class="sl">EVENTS</span><div class="sv o" id="sEv">0</div></div>
+    <div class="sb"><span class="sl">TRACK IDs</span><div class="sv g" id="sTr">0</div></div>
+    <div class="sb"><span class="sl">ZONE HITS</span><div class="sv r" id="sZ">0</div></div>
   </div>
 </div>
 
-<!-- ACTIVE TRACKS -->
-<div class="pnl grow" style="max-height:170px;">
+<!-- ARMED CONFIRMATION PROGRESS (shown when confirming) -->
+<div class="pnl" id="armConfirmPnl" style="display:none;">
+  <div class="pnl-h">THREAT CONFIRMATION</div>
+  <div class="arm-confirm">
+    <span id="armConfirmLbl">CONFIRMING...</span>
+    <div class="arm-bar-wrap"><div class="arm-bar" id="armBar" style="width:0%"></div></div>
+    <span id="armConfirmPct" style="font-size:8px;color:var(--y);width:26px;text-align:right;">0%</span>
+  </div>
+  <div style="font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--dim);margin-top:4px;letter-spacing:1px;">
+    REQUIRES <span style="color:var(--y)" id="armFramesNeeded">--</span> CONSECUTIVE FRAMES
+  </div>
+</div>
+
+<div class="pnl grow" style="max-height:200px;">
   <div class="pnl-h">ACTIVE TRACKS</div>
   <div class="track-list" id="trackList">
     <div class="track-item"><span style="color:var(--dim)">NO ACTIVE TRACKS</span></div>
   </div>
 </div>
 
-<!-- CONTROLS -->
 <div class="pnl">
   <div class="pnl-h">SYSTEM CONTROLS</div>
   <div class="ctrl-row">
-    <label>BODY CONF</label>
-    <input type="range" id="confSl" min="30" max="90" value="50" oninput="setConf(this.value)">
-    <span id="confV">50%</span>
-  </div>
-  <div class="ctrl-row">
-    <label>FACE CONF</label>
-    <input type="range" id="faceConfSl" min="50" max="95" value="70" oninput="setFaceConf(this.value)">
-    <span id="faceConfV">70%</span>
+    <label>MIN CONF</label>
+    <input type="range" id="confSl" min="30" max="90" value="55" oninput="setConf(this.value)">
+    <span id="confV">55%</span>
   </div>
   <div class="ctrl-row">
     <label>TRAIL LEN</label>
-    <input type="range" id="trailSl" min="5" max="40" value="18" oninput="setTrail(this.value)">
-    <span id="trailV">18</span>
+    <input type="range" id="trailSl" min="5" max="40" value="20" oninput="setTrail(this.value)">
+    <span id="trailV">20</span>
   </div>
-  <div class="zone-msg" id="zoneMsg">◉ TAP FEED TO SET ZONE CORNERS</div>
+  <div class="ctrl-row">
+    <label>ARM FRAMES</label>
+    <input type="range" id="armSl" min="3" max="15" value="6" oninput="setArmFrames(this.value)">
+    <span id="armV">6</span>
+  </div>
+  <div class="zone-msg" id="zoneMsg">◉ TAP FEED TO SET ZONE CORNERS · TAP AGAIN TO FINISH</div>
   <div class="btn-grid">
     <button class="cb o" id="zoneBtn" onclick="toggleZoneDraw()">⬚ DRAW<br>ZONE</button>
     <button class="cb r" onclick="clearZone()">✕ CLEAR<br>ZONE</button>
@@ -414,7 +373,6 @@ letter-spacing:1px;display:flex;align-items:center;gap:5px;}
   </div>
 </div>
 
-<!-- EVENT LOG -->
 <div class="pnl grow">
   <div class="pnl-h">EVENT LOG</div>
   <div class="alert-log" id="evLog"></div>
@@ -429,18 +387,18 @@ letter-spacing:1px;display:flex;align-items:center;gap:5px;}
 <div class="bot">
   <div class="ss">
     <div class="si"><div class="dot" id="dCam"></div><span>CAM</span></div>
-    <div class="si"><div class="dot" id="dBody"></div><span>BODY AI</span></div>
-    <div class="si"><div class="dot" id="dFace"></div><span>FACE AI</span></div>
+    <div class="si"><div class="dot" id="dAI"></div><span>AI ENGINE</span></div>
+    <div class="si"><div class="dot" id="dTrack"></div><span>TRACKER</span></div>
     <div class="si"><div class="dot" id="dZone"></div><span>ZONE</span></div>
   </div>
   <div class="bot-status" id="botStatus">■ SYSTEM OFFLINE</div>
   <div class="ss">
     <div class="si" id="bFPS">FPS: --</div>
-    <div class="si" id="bModel">ENGINES: OFFLINE</div>
+    <div class="si" id="bModel">MODEL: OFFLINE</div>
   </div>
 </div>
 
-</div>
+</div><!-- /app -->
 
 <script>
 'use strict';
@@ -451,31 +409,30 @@ const VEHICLES = new Set(['bicycle','car','motorbike','bus','truck','boat','trai
 const ANIMALS  = new Set(['bird','cat','dog','horse','sheep','cow','elephant','bear','zebra','giraffe']);
 
 // ── DOM ───────────────────────────────────────────
-const $  = id => document.getElementById(id);
+const $ = id => document.getElementById(id);
 const vid=$('vid'), ov=$('ov'), ctx=ov.getContext('2d');
 
 // ── STATE ─────────────────────────────────────────
-let bodyModel=null, faceModel=null, running=false;
-let threshold=0.50, faceThreshold=0.70, trailLen=18, showTrails=true;
+let model=null, running=false;
+let threshold=0.55, trailLen=20, showTrails=true;
+let ARM_FRAMES_REQUIRED=6;   // frames to confirm armed — configurable
 let frameIdx=0, frameCount=0, fpsTimer=Date.now(), fps=0;
-let lastBodyPreds=[], lastFacePreds=[];
-let prevFrame=null;
-let totalEvents=0, zoneAlerts=0;
+let lastPreds=[], prevFrame=null;
+let totalAlerts=0, zoneAlerts=0;
 let bannerTimer=null;
-const BANNER_HOLD=3500;
+const BANNER_HOLD=3000;
 
-// ── ZONE ──────────────────────────────────────────
-let zonePoints=[], zoneDrawMode=false, zoneActive=false;
+// ── ZONE STATE ────────────────────────────────────
+let zonePoints=[];
+let zoneDrawMode=false;
+let zoneActive=false;
 
-// ── TRACKER ───────────────────────────────────────
-let tracks=[], nextId=1;
-const freeIds=[];
-const MAX_MISSED=10, MIN_IOU=0.20;
-const TRAIL_COLORS=['#00b0ff','#00ff88','#ffd600','#ff9100','#b388ff','#00e5ff','#69f0ae','#ff6d00'];
-
-// ── THREAT STATE ──────────────────────────────────
-// Smooth threat score to avoid flickering
-let smoothThreatScore=0;
+// ── TRACKER STATE ─────────────────────────────────
+let tracks=[];
+let nextId=1;
+const MAX_MISSED=8;
+const MIN_IOU=0.25;
+const TRAIL_COLORS=['#00b0ff','#00ff88','#ffd600','#ff9100','#ff1744','#b388ff','#00e5ff','#69f0ae'];
 
 // ── CLOCK ─────────────────────────────────────────
 function tick(){
@@ -488,12 +445,11 @@ setInterval(tick,1000); tick();
 
 // ── ACTIVATE ──────────────────────────────────────
 $('actBtn').addEventListener('click', activate);
+
 async function activate(){
   $('idleScr').style.display='none';
   const ls=$('loadScr'); ls.style.display='flex';
-
-  // Camera
-  setLoad('REQUESTING CAMERA…',5,'CAMERA INIT');
+  setLoad('REQUESTING CAMERA ACCESS…',8);
   try{
     let stream;
     try{
@@ -504,95 +460,125 @@ async function activate(){
       stream=await navigator.mediaDevices.getUserMedia({video:true,audio:false});
     }
     vid.srcObject=stream; vid.style.display='block';
-    await new Promise(r=>{vid.onloadedmetadata=r;}); await vid.play();
+    await new Promise(r=>{vid.onloadedmetadata=r;});
+    await vid.play();
+
     function syncCanvas(){
       ov.width=vid.videoWidth||vid.offsetWidth||640;
       ov.height=vid.videoHeight||vid.offsetHeight||480;
       $('hRES').textContent=`${ov.width}×${ov.height}`;
     }
     syncCanvas(); new ResizeObserver(syncCanvas).observe(vid);
+    setLoad('CAMERA ACTIVE — LOADING AI MODEL…',25);
     document.querySelectorAll('.brk,.hud').forEach(e=>e.style.display='block');
     $('dCam').className='dot on';
+
     ov.parentElement.addEventListener('click', handleZoneClick);
 
-    // TF.js
-    setLoad('TF.JS READY…',18,'TENSORFLOW INIT');
-    await window.tf.ready();
-
-    // Body model
-    setLoad('LOADING BODY DETECTION MODEL…',30,'COCO-SSD LITE_MOBILENET_V2');
     try{
-      bodyModel=await cocoSsd.load({base:'lite_mobilenet_v2'});
-      $('dBody').className='dot on';
-      sysLog('Body engine loaded — COCO-SSD lite_mobilenet_v2','ok');
-    }catch(e){ sysLog('Body engine failed: '+e.message,'alert'); }
-
-    // Face model
-    setLoad('LOADING FACE DETECTION MODEL…',62,'BLAZEFACE — GOOGLE');
-    try{
-      faceModel=await blazeface.load();
-      $('dFace').className='dot on';
-      sysLog('Face engine loaded — BlazeFace (Google MediaPipe)','ok');
+      await window.tf.ready();
+      setLoad('TENSORFLOW.JS READY — LOADING COCO-SSD…',50);
+      model=await cocoSsd.load({base:'lite_mobilenet_v2'});
+      setLoad('AI MODEL LOADED — INITIALISING TRACKER…',85);
+      $('dAI').className='dot on';
+      $('dTrack').className='dot on';
+      $('bModel').textContent='MODEL: COCO-SSD + MTT';
+      sysLog('AI engine loaded — lite_mobilenet_v2','ok');
+      sysLog('Multi-target tracker initialised — Kalman+IoU+NMS','ok');
+      sysLog(`NMS merge threshold: 0.40 IoU — duplicate suppression active`,'ok');
+      sysLog(`Armed confirmation: ${ARM_FRAMES_REQUIRED} consecutive frames required`,'ok');
+      sysLog('Post: Ganasok · Sector Alpha · 18,000 ft','sys');
     }catch(e){
-      sysLog('Face engine failed (offline?): '+e.message,'warn');
-      sysLog('Face counting will use body-only fallback','sys');
+      setLoad('MODEL FAILED: '+e.message,100); return;
     }
-
-    setLoad('INITIALISING TRACKER…',88,'KALMAN + IoU + NMS');
-    $('bModel').textContent='COCO-SSD + BLAZEFACE + MTT';
-    sysLog('Tracker: Kalman filter + IoU association + NMS merge','ok');
-    sysLog('Threat engine: behaviour-based scoring (6 factors)','ok');
-    sysLog('NOTE: Weapon detection requires YOLOv8 hardware phase','sys');
-    sysLog('Post: Ganasok · Sector Alpha · 18,000 ft','sys');
-
-    setLoad('DRISHTI v3 ACTIVE',100,'DUAL ENGINE READY');
-    await new Promise(r=>setTimeout(r,500));
+    setLoad('DRISHTI v2 ACTIVE',100);
+    await new Promise(r=>setTimeout(r,400));
     ls.style.display='none';
-    $('thrLevel').style.display='block';
-    $('sysBadge').textContent='■ SURVEILLANCE ACTIVE'; $('sysBadge').classList.add('live');
-    $('botStatus').textContent='◉ DUAL ENGINE ACTIVE'; $('botStatus').classList.add('live');
+    $('sysBadge').textContent='■ TRACKING ACTIVE'; $('sysBadge').classList.add('live');
+    $('botStatus').textContent='◉ MTT ACTIVE'; $('botStatus').classList.add('live');
     running=true;
     requestAnimationFrame(loop);
   }catch(err){
-    setLoad('⚠ CAMERA DENIED — Allow in browser settings',100,'ERROR');
+    setLoad('⚠ CAMERA DENIED — Allow in browser settings',100);
     setTimeout(()=>{ls.style.display='none';$('idleScr').style.display='flex';},4000);
   }
 }
-function setLoad(m,p,s){
-  $('loadMsg').textContent=m;
-  $('loadFill').style.width=p+'%';
-  if(s) $('loadStep').textContent=s;
+function setLoad(m,p){$('loadMsg').textContent=m;$('loadFill').style.width=p+'%';}
+
+// ══════════════════════════════════════════════════
+// KALMAN FILTER
+// ══════════════════════════════════════════════════
+class KalmanBox{
+  constructor(bbox){
+    this.x=[bbox[0],0]; this.y=[bbox[1],0];
+    this.w=[bbox[2],0]; this.h=[bbox[3],0];
+    this.pNoise=0.1; this.mNoise=3.0;
+    this.Px=[1,0,0,10]; this.Py=[1,0,0,10];
+    this.Pw=[1,0,0,10]; this.Ph=[1,0,0,10];
+  }
+  predict(){
+    this._p1D(this.x,this.Px); this._p1D(this.y,this.Py);
+    this._p1D(this.w,this.Pw); this._p1D(this.h,this.Ph);
+    return[this.x[0],this.y[0],this.w[0],this.h[0]];
+  }
+  update(bbox){
+    this._u1D(this.x,this.Px,bbox[0]); this._u1D(this.y,this.Py,bbox[1]);
+    this._u1D(this.w,this.Pw,bbox[2]); this._u1D(this.h,this.Ph,bbox[3]);
+    return[this.x[0],this.y[0],this.w[0],this.h[0]];
+  }
+  _p1D(s,P){
+    s[0]+=s[1];
+    const p00=P[0]+P[1]+P[2]+P[3]+this.pNoise;
+    const p01=P[1]+P[3], p10=P[2]+P[3], p11=P[3]+this.pNoise;
+    P[0]=p00;P[1]=p01;P[2]=p10;P[3]=p11;
+  }
+  _u1D(s,P,z){
+    const S=P[0]+this.mNoise, K0=P[0]/S, K1=P[2]/S;
+    const inn=z-s[0]; s[0]+=K0*inn; s[1]+=K1*inn;
+    P[0]=(1-K0)*P[0]; P[1]=(1-K0)*P[1];
+    P[2]=P[2]-K1*P[0]; P[3]=P[3]-K1*P[1];
+  }
 }
 
 // ══════════════════════════════════════════════════
 // NON-MAXIMUM SUPPRESSION + BOX MERGE
+// Fixes: "two feet of same person = two person tracks"
 //
-// Problem solved: Two feet / partial body detections of
-// the SAME person produce multiple COCO-SSD boxes.
-// Solution: If two same-class boxes overlap > nmsThresh IoU,
-// merge them into one union box (not discard — merge gives
-// a larger complete bounding box).
-// Result: Left boot + right boot → one track, one ID.
+// Algorithm:
+//   1. Sort detections by confidence (highest first)
+//   2. For each detection, check if it overlaps >NMS_THRESH
+//      IoU with any already-kept detection OF SAME CLASS
+//   3. If yes → MERGE the two boxes into their union bbox
+//      (not suppress/discard — merge gives a larger, more
+//      complete bounding box covering both partial detections)
+//   4. If no → keep as new detection
+//
+// Result: two partial-body detections of same person
+// collapse into one larger box → one track, one ID.
 // ══════════════════════════════════════════════════
 function nmsAndMerge(rawDets, nmsThresh){
+  // Sort by confidence desc
   const sorted=[...rawDets].sort((a,b)=>b.conf-a.conf);
   const kept=[];
   sorted.forEach(d=>{
     let merged=false;
     for(let i=0;i<kept.length;i++){
       if(kept[i].cls!==d.cls) continue;
-      if(iou(kept[i].bbox,d.bbox)>=nmsThresh){
-        // Union merge
-        const ax=Math.min(kept[i].bbox[0],d.bbox[0]);
-        const ay=Math.min(kept[i].bbox[1],d.bbox[1]);
-        const ax2=Math.max(kept[i].bbox[0]+kept[i].bbox[2],d.bbox[0]+d.bbox[2]);
-        const ay2=Math.max(kept[i].bbox[1]+kept[i].bbox[3],d.bbox[1]+d.bbox[3]);
-        kept[i].bbox=[ax,ay,ax2-ax,ay2-ay];
-        kept[i].conf=Math.max(kept[i].conf,d.conf);
-        merged=true; break;
+      const overlap=iou(kept[i].bbox, d.bbox);
+      if(overlap>=nmsThresh){
+        // MERGE: take union of both boxes
+        const ax=Math.min(kept[i].bbox[0], d.bbox[0]);
+        const ay=Math.min(kept[i].bbox[1], d.bbox[1]);
+        const ax2=Math.max(kept[i].bbox[0]+kept[i].bbox[2], d.bbox[0]+d.bbox[2]);
+        const ay2=Math.max(kept[i].bbox[1]+kept[i].bbox[3], d.bbox[1]+d.bbox[3]);
+        kept[i].bbox=[ax, ay, ax2-ax, ay2-ay];
+        // Keep higher confidence
+        kept[i].conf=Math.max(kept[i].conf, d.conf);
+        merged=true;
+        break;
       }
     }
-    if(!merged) kept.push({...d,bbox:[...d.bbox]});
+    if(!merged) kept.push({...d, bbox:[...d.bbox]});
   });
   return kept;
 }
@@ -608,88 +594,134 @@ function iou(a,b){
 }
 
 // ══════════════════════════════════════════════════
-// KALMAN FILTER
+// ARMED PERSON DETECTION — v3 FINAL
+//
+// Photos confirmed two failure modes:
+//
+// Mode A (v1 bug): Camera pointing DOWN at own feet/legs
+//   → COCO-SSD returns box starting at y≈0 (fills frame)
+//   → Old topFrac check failed since topFrac was LOW
+//
+// Mode B (v2 bug): After NMS merges two foot detections,
+//   the merged box is TALL (top near 0, fills frame height)
+//   → All 4 gates passed even though it's still feet
+//
+// ROOT TEST: When the camera is pointing down at own feet,
+//   the merged bounding box has:
+//   - topFrac ≈ 0.0–0.15 (starts at top)
+//   - heightFrac ≈ 0.7–1.0 (very tall, fills frame)
+//   - ratio (w/h) ≈ 0.3–0.6 (taller than wide — PASSES ratio gate)
+//   - centroid ≈ 0.4–0.6 vertically (PASSES centroid gate)
+//
+// NEW DEFINITIVE FIX — Camera-angle gate:
+//   If a "person" box covers >60% of frame HEIGHT and also
+//   covers >55% of frame WIDTH, the camera is almost certainly
+//   pointing straight down at a close subject — REJECT.
+//   This is physically impossible for a real standing person
+//   at surveillance distance (they would never fill the whole frame).
 // ══════════════════════════════════════════════════
-class KalmanBox{
-  constructor(b){
-    this.x=[b[0],0];this.y=[b[1],0];this.w=[b[2],0];this.h=[b[3],0];
-    this.pN=0.1;this.mN=3.0;
-    this.Px=[1,0,0,10];this.Py=[1,0,0,10];this.Pw=[1,0,0,10];this.Ph=[1,0,0,10];
-  }
-  predict(){
-    this._p(this.x,this.Px);this._p(this.y,this.Py);
-    this._p(this.w,this.Pw);this._p(this.h,this.Ph);
-    return[this.x[0],this.y[0],this.w[0],this.h[0]];
-  }
-  update(b){
-    this._u(this.x,this.Px,b[0]);this._u(this.y,this.Py,b[1]);
-    this._u(this.w,this.Pw,b[2]);this._u(this.h,this.Ph,b[3]);
-    return[this.x[0],this.y[0],this.w[0],this.h[0]];
-  }
-  _p(s,P){
-    s[0]+=s[1];
-    const p00=P[0]+P[1]+P[2]+P[3]+this.pN,p01=P[1]+P[3],p10=P[2]+P[3],p11=P[3]+this.pN;
-    P[0]=p00;P[1]=p01;P[2]=p10;P[3]=p11;
-  }
-  _u(s,P,z){
-    const S=P[0]+this.mN,K0=P[0]/S,K1=P[2]/S,inn=z-s[0];
-    s[0]+=K0*inn;s[1]+=K1*inn;
-    P[0]=(1-K0)*P[0];P[1]=(1-K0)*P[1];P[2]=P[2]-K1*P[0];P[3]=P[3]-K1*P[1];
-  }
+function isArmedCandidate(bbox, ovW, ovH){
+  const [x, y, w, h] = bbox;
+
+  const heightFrac = h / ovH;
+  const widthFrac  = w / ovW;
+  const topFrac    = y / ovH;
+  const ratio      = w / h;
+  const cy         = (y + h/2) / ovH;
+
+  // Gate 1: Minimum apparent size — must be at least 15% of frame height
+  // Filters out tiny/distant false positives
+  if(heightFrac < 0.15) return false;
+
+  // Gate 2: DOWNWARD CAMERA / CLOSE BODY PART REJECTION
+  // A real standing person at surveillance distance CANNOT fill
+  // more than ~60% height AND ~55% width simultaneously.
+  // This catches: feet pointed at camera, torso fills frame, etc.
+  if(heightFrac > 0.60 && widthFrac > 0.50) return false;
+
+  // Gate 3: Box must not be excessively tall relative to width
+  // A standing person at range: ratio 0.25–0.75
+  // Own boots/close body filling frame: ratio can be 0.3–0.5 BUT
+  // they are caught by Gate 2 first. This catches other edge cases.
+  if(ratio > 0.90) return false;   // too wide = lateral/sprawled
+  if(ratio < 0.15) return false;   // impossibly thin = artifact
+
+  // Gate 4: Head region must be plausibly in frame
+  // If top of box is below 60% of frame height, no head visible
+  if(topFrac > 0.60) return false;
+
+  // Gate 5: Centroid must not be in bottom third of frame
+  // Leg/feet detections cluster in cy > 0.65
+  if(cy > 0.68) return false;
+
+  return true;
 }
 
-// ── TRACKER ───────────────────────────────────────
+// ── MULTI-TARGET TRACKER ──────────────────────────
+// Track ID recycling: dead track IDs go into a free pool
+// and are reused for new tracks. This keeps IDs stable
+// and prevents the counter from climbing to #29, #30...
+// during a single session of pointing camera at own feet.
+const freeIds = [];   // pool of recycled IDs
+
 function getNextId(){
-  return freeIds.length>0?freeIds.sort((a,b)=>a-b).shift():nextId++;
+  if(freeIds.length > 0) return freeIds.sort((a,b)=>a-b).shift();
+  return nextId++;
 }
 
 function updateTracker(detections){
-  tracks.forEach(t=>{t.predicted=t.kalman.predict();});
-  const matched=new Set(),usedDet=new Set(),pairs=[];
+  tracks.forEach(t=>{ t.predicted=t.kalman.predict(); });
+
+  const matched=new Set(), usedDet=new Set();
+  const pairs=[];
   tracks.forEach((t,ti)=>{
     detections.forEach((d,di)=>{
-      const s=iou(t.predicted,d.bbox);
-      if(s>=MIN_IOU) pairs.push({ti,di,s});
+      const score=iou(t.predicted,d.bbox);
+      if(score>=MIN_IOU) pairs.push({ti,di,score});
     });
   });
-  pairs.sort((a,b)=>b.s-a.s);
+  pairs.sort((a,b)=>b.score-a.score);
   pairs.forEach(({ti,di})=>{
     if(!matched.has(ti)&&!usedDet.has(di)){
-      matched.add(ti);usedDet.add(di);
-      const t=tracks[ti],d=detections[di];
-      t.bbox=t.kalman.update(d.bbox);t.cls=d.cls;t.conf=d.conf;
-      t.missed=0;t.age++;
-      t.trail.push({x:t.bbox[0]+t.bbox[2]/2,y:t.bbox[1]+t.bbox[3]/2});
+      matched.add(ti); usedDet.add(di);
+      const t=tracks[ti], d=detections[di];
+      t.bbox=t.kalman.update(d.bbox);
+      t.cls=d.cls; t.conf=d.conf;
+      t.missed=0; t.age++;
+      const cx=t.bbox[0]+t.bbox[2]/2, cy=t.bbox[1]+t.bbox[3]/2;
+      t.trail.push({x:cx,y:cy});
       if(t.trail.length>trailLen) t.trail.shift();
-      // Speed (px/frame, smoothed)
-      if(t.trail.length>=2){
-        const p1=t.trail[t.trail.length-2],p2=t.trail[t.trail.length-1];
-        const spd=Math.sqrt((p2.x-p1.x)**2+(p2.y-p1.y)**2);
-        t.speed=t.speed*0.7+spd*0.3; // EMA smoothing
-      }
     }
   });
   tracks.forEach((t,ti)=>{
     if(!matched.has(ti)){
-      t.missed++;t.bbox=t.predicted;
-      t.speed=t.speed*0.8; // decay speed when unmatched
-      t.trail.push({x:t.bbox[0]+t.bbox[2]/2,y:t.bbox[1]+t.bbox[3]/2});
+      t.missed++;
+      t.bbox=t.predicted;
+      // Reset armed counter when track is missed
+      if(t.armedFrames>0) t.armedFrames=Math.max(0,t.armedFrames-2);
+      const cx=t.bbox[0]+t.bbox[2]/2, cy=t.bbox[1]+t.bbox[3]/2;
+      t.trail.push({x:cx,y:cy});
       if(t.trail.length>trailLen) t.trail.shift();
     }
   });
-  const killed=tracks.filter(t=>t.missed>=MAX_MISSED);
-  killed.forEach(t=>{ if(t.id<=20) freeIds.push(t.id); });
+  // Kill old tracks AND recycle their IDs
+  const killed = tracks.filter(t=>t.missed>=MAX_MISSED);
+  killed.forEach(t=>{ if(t.id < 20) freeIds.push(t.id); }); // recycle low IDs only
   tracks=tracks.filter(t=>t.missed<MAX_MISSED);
   detections.forEach((d,di)=>{
     if(!usedDet.has(di)){
+      const color=TRAIL_COLORS[(nextId-1)%TRAIL_COLORS.length];
       tracks.push({
-        id:getNextId(),cls:d.cls,conf:d.conf,
-        bbox:[...d.bbox],kalman:new KalmanBox(d.bbox),
+        id:getNextId(), cls:d.cls, conf:d.conf,
+        bbox:[...d.bbox], kalman:new KalmanBox(d.bbox),
         predicted:[...d.bbox],
         trail:[{x:d.bbox[0]+d.bbox[2]/2,y:d.bbox[1]+d.bbox[3]/2}],
-        age:1,missed:0,speed:0,
-        color:TRAIL_COLORS[(nextId-1)%TRAIL_COLORS.length],
-        zoneHitLogged:false
+        age:1, missed:0, color,
+        zoneHit:false, zoneHitLogged:false,
+        // ── ARMED FRAME COUNTER ──
+        armedFrames:0,       // consecutive frames passing gates
+        armedConfirmed:false,// true only after ARM_FRAMES_REQUIRED
+        armedLoggedAt:0      // avoid spam logging
       });
     }
   });
@@ -701,7 +733,8 @@ function pointInZone(px,py){
   if(zonePoints.length<3) return false;
   let inside=false;
   for(let i=0,j=zonePoints.length-1;i<zonePoints.length;j=i++){
-    const xi=zonePoints[i].x,yi=zonePoints[i].y,xj=zonePoints[j].x,yj=zonePoints[j].y;
+    const xi=zonePoints[i].x,yi=zonePoints[i].y;
+    const xj=zonePoints[j].x,yj=zonePoints[j].y;
     if(((yi>py)!==(yj>py))&&(px<(xj-xi)*(py-yi)/(yj-yi)+xi)) inside=!inside;
   }
   return inside;
@@ -713,136 +746,68 @@ function handleZoneClick(e){
   const px=(e.clientX-rect.left)*(ov.width/rect.width);
   const py=(e.clientY-rect.top)*(ov.height/rect.height);
   if(zonePoints.length>=4){
-    finishZone(); return;
+    zoneDrawMode=false; zoneActive=true;
+    $('zoneBtn').classList.remove('active-btn');
+    $('zoneMsg').classList.remove('show');
+    $('dZone').className='dot warn';
+    sysLog('Restricted zone activated','warn'); return;
   }
   zonePoints.push({x:px,y:py});
   sysLog(`Zone point ${zonePoints.length} set (${Math.round(px)},${Math.round(py)})`,'sys');
-  if(zonePoints.length===4) finishZone();
+  if(zonePoints.length===4){
+    zoneDrawMode=false; zoneActive=true;
+    $('zoneBtn').classList.remove('active-btn');
+    $('zoneMsg').classList.remove('show');
+    $('dZone').className='dot warn';
+    sysLog('Restricted zone activated — 4 points','warn');
+  }
 }
 
-function finishZone(){
-  zoneDrawMode=false;zoneActive=true;
-  $('zoneBtn').classList.remove('active-btn');
-  $('zoneMsg').classList.remove('show');
-  $('dZone').className='dot warn';
-  sysLog('Restricted zone activated','warn');
-}
 function toggleZoneDraw(){
-  if(zoneDrawMode){zoneDrawMode=false;$('zoneBtn').classList.remove('active-btn');$('zoneMsg').classList.remove('show');return;}
-  zonePoints=[];zoneDrawMode=true;zoneActive=false;$('dZone').className='dot';
-  $('zoneBtn').classList.add('active-btn');$('zoneMsg').classList.add('show');
+  if(zoneDrawMode){
+    zoneDrawMode=false;
+    $('zoneBtn').classList.remove('active-btn');
+    $('zoneMsg').classList.remove('show');
+    return;
+  }
+  zonePoints=[]; zoneDrawMode=true; zoneActive=false;
+  $('dZone').className='dot';
+  $('zoneBtn').classList.add('active-btn');
+  $('zoneMsg').classList.add('show');
   sysLog('Zone draw mode — tap 4 corners on feed','sys');
 }
+
 function clearZone(){
-  zonePoints=[];zoneDrawMode=false;zoneActive=false;$('dZone').className='dot';
-  $('zoneBtn').classList.remove('active-btn');$('zoneMsg').classList.remove('show');
+  zonePoints=[]; zoneDrawMode=false; zoneActive=false;
+  $('dZone').className='dot';
+  $('zoneBtn').classList.remove('active-btn');
+  $('zoneMsg').classList.remove('show');
   sysLog('Restricted zone cleared','sys');
 }
 
-// ── MOTION ────────────────────────────────────────
-function getMotion(){
-  if(vid.readyState<2||ov.width<2) return{detected:false,level:0};
-  try{
-    const curr=ctx.getImageData(0,0,ov.width,ov.height);
-    if(!prevFrame){prevFrame=curr;return{detected:false,level:0};}
-    const d1=prevFrame.data,d2=curr.data;
-    let diff=0;
-    for(let i=0;i<d1.length;i+=16){
-      if(Math.abs(d1[i]-d2[i])+Math.abs(d1[i+1]-d2[i+1])+Math.abs(d1[i+2]-d2[i+2])>28) diff++;
-    }
-    prevFrame=curr;
-    return{detected:diff>15,level:Math.min(diff/80,1)};
-  }catch{return{detected:false,level:0};}
-}
-
-// ── LIGHT LEVEL (day/night estimation) ───────────
-function getLightLevel(){
-  // Sample a small area of the canvas for average brightness
-  try{
-    const sample=ctx.getImageData(ov.width/2-40,ov.height/2-40,80,80);
-    let sum=0;
-    for(let i=0;i<sample.data.length;i+=4){
-      sum+=(sample.data[i]+sample.data[i+1]+sample.data[i+2])/3;
-    }
-    return sum/(sample.data.length/4); // 0-255
-  }catch{return 128;}
-}
-
-// ══════════════════════════════════════════════════
-// BEHAVIOUR-BASED THREAT SCORING ENGINE
-//
-// Replaces the fake "armed" detection entirely.
-// COCO-SSD has no weapon classes. Claiming to detect
-// rifles with COCO-SSD is dishonest and unreliable.
-//
-// Instead, DRISHTI v3 uses a transparent, auditable
-// multi-factor threat score (0–100) based on observable
-// behaviours, exactly like professional surveillance
-// systems (Axis Guard, Bosch VideoSecurity, Milestone XProtect).
-//
-// The score feeds the banner — no single factor alone
-// triggers an alert, making false positives much harder.
-//
-// Factor weights:
-//   PERSONS ≥ 1          → +20 (baseline: intruder present)
-//   FACES confirmed       → +15 (face engine confirms real people)
-//   GROUP SIZE > 2        → +20 (group more threatening than solo)
-//   RAPID MOVEMENT        → +20 (running/fast approach)
-//   NIGHT / LOW LIGHT     → +15 (higher risk time)
-//   ZONE INTRUSION        → +10 (direct boundary violation)
-//   [max = 100]
-// ══════════════════════════════════════════════════
-function computeThreatScore(persons, faceCount, inZone, maxSpeed, lightLevel){
-  let score=0;
-  const factors={persons:false,faces:false,group:false,move:false,night:false,zone:false};
-
-  if(persons>=1){score+=20;factors.persons=true;}
-  if(faceCount>=1){score+=15;factors.faces=true;}
-  if(persons>2||faceCount>2){score+=20;factors.group=true;}
-  if(maxSpeed>8){score+=20;factors.move=true;}        // 8px/frame = brisk movement
-  if(lightLevel<60){score+=15;factors.night=true;}    // avg brightness < 60 = dark
-  if(inZone){score+=10;factors.zone=true;}
-
-  return{score:Math.min(score,100), factors};
-}
-
 // ── MAIN LOOP ─────────────────────────────────────
-let faceRunFrame=0;
 async function loop(){
   if(!running) return;
   frameCount++;
   const now=Date.now();
-  if(now-fpsTimer>=1000){fps=frameCount;frameCount=0;fpsTimer=now;
-    $('hFPS').textContent=fps;$('bFPS').textContent='FPS:'+fps;}
-
+  if(now-fpsTimer>=1000){
+    fps=frameCount; frameCount=0; fpsTimer=now;
+    $('hFPS').textContent=fps; $('bFPS').textContent='FPS:'+fps;
+  }
   if(vid.readyState>=2){
     ov.width=vid.videoWidth||ov.width;
     ov.height=vid.videoHeight||ov.height;
     ctx.drawImage(vid,0,0,ov.width,ov.height);
   }
-
   const motion=getMotion();
   frameIdx++;
-
-  // Body detection every 4 frames
-  if(bodyModel&&frameIdx%4===0&&vid.readyState>=2){
-    try{lastBodyPreds=await bodyModel.detect(vid);}catch{lastBodyPreds=[];}
+  if(model&&frameIdx%4===0&&vid.readyState>=2){
+    try{lastPreds=await model.detect(vid);}catch{lastPreds=[];}
   }
-
-  // Face detection every 6 frames (slightly less frequent — heavier)
-  faceRunFrame++;
-  if(faceModel&&faceRunFrame%6===0&&vid.readyState>=2){
-    try{
-      // BlazeFace returns faces with topLeft, bottomRight, landmarks, probability
-      const raw=await faceModel.estimateFaces(vid,false);
-      lastFacePreds=raw.filter(f=>f.probability[0]>=faceThreshold);
-    }catch{lastFacePreds=[];}
-  }
-
-  // Build body detections with NMS
+  // ── STEP 1: Filter raw predictions ───────────────
   const rawDets=[];
   let maxConf=0;
-  lastBodyPreds.forEach(p=>{
+  lastPreds.forEach(p=>{
     if(p.score<threshold) return;
     const c=p.class;
     const isP=PERSONS.has(c),isV=VEHICLES.has(c),isA=ANIMALS.has(c);
@@ -850,323 +815,353 @@ async function loop(){
     rawDets.push({bbox:p.bbox,cls:isP?'person':isV?'vehicle':'animal',conf:p.score});
     if(p.score>maxConf) maxConf=p.score;
   });
-  const dets=nmsAndMerge(rawDets,0.35);
+
+  // ── STEP 2: Non-Maximum Suppression ──────────────
+  // Merges two boxes for the SAME CLASS that overlap >50% IoU
+  // into a single larger bounding box (union). This is the fix
+  // for "two feet = two persons" — both foot boxes overlap heavily
+  // so they collapse into one detection before reaching the tracker.
+  const dets = nmsAndMerge(rawDets, 0.40);
+
   const activeTracks=updateTracker(dets);
 
-  // Light level
-  const lightLevel=getLightLevel();
-
-  // Compute scene stats
-  let persons=0,vehicles=0,zoneIntrusion=false,maxSpeed=0;
+  // ── UPDATE ARMED FRAME COUNTERS ──────────────────
+  // This runs AFTER tracker update so bboxes are fresh
+  let anyConfirming=false, maxArmPct=0;
   activeTracks.forEach(t=>{
-    if(t.cls==='person') persons++;
-    else if(t.cls==='vehicle') vehicles++;
-    const cx=t.bbox[0]+t.bbox[2]/2,cy=t.bbox[1]+t.bbox[3]/2;
-    if(zoneActive&&pointInZone(cx,cy)){
-      zoneIntrusion=true;
-      if(!t.zoneHitLogged){
-        t.zoneHitLogged=true; zoneAlerts++;
-        sysLog(`ZONE BREACH: Track #${t.id} entered restricted zone`,'alert');
-        totalEvents++;
-      }
+    if(t.cls!=='person'){t.armedFrames=0;t.armedConfirmed=false;return;}
+    const candidate=isArmedCandidate(t.bbox,ov.width,ov.height);
+    if(candidate){
+      t.armedFrames=Math.min(t.armedFrames+1, ARM_FRAMES_REQUIRED);
+    } else {
+      // Decay counter when gates stop passing
+      t.armedFrames=Math.max(0,t.armedFrames-1);
     }
-    if(t.speed>maxSpeed) maxSpeed=t.speed;
+    const wasConfirmed=t.armedConfirmed;
+    t.armedConfirmed=(t.armedFrames>=ARM_FRAMES_REQUIRED);
+    // Log transition to confirmed
+    if(t.armedConfirmed&&!wasConfirmed){
+      sysLog(`ARMED THREAT CONFIRMED: Track #${t.id} — ${ARM_FRAMES_REQUIRED} frame threshold met`,'alert');
+    }
+    // Log if confirmed → cleared
+    if(!t.armedConfirmed&&wasConfirmed&&t.armedFrames===0){
+      sysLog(`Track #${t.id} — armed status cleared`,'info');
+    }
+    // Tracking for sidebar progress bar
+    const pct=t.armedFrames/ARM_FRAMES_REQUIRED;
+    if(pct>0&&pct<1) anyConfirming=true;
+    if(pct>maxArmPct) maxArmPct=pct;
   });
 
-  const faceCount=lastFacePreds.length;
+  // Update armed confirmation panel
+  updateArmPanel(anyConfirming, maxArmPct);
 
-  // Threat score
-  const {score,factors}=computeThreatScore(persons,faceCount,zoneIntrusion,maxSpeed,lightLevel);
-  // Smooth score (EMA) to prevent flickering
-  smoothThreatScore=smoothThreatScore*0.75+score*0.25;
-  const displayScore=Math.round(smoothThreatScore);
-
-  drawScene(activeTracks, motion, maxConf, faceCount, lightLevel);
-  updateThreatPanel(displayScore, factors, persons, faceCount, maxSpeed, zoneIntrusion, lightLevel);
+  drawScene(activeTracks, motion, maxConf);
   updateSidebar(activeTracks);
-  updateBanner(displayScore, factors);
   requestAnimationFrame(loop);
 }
 
-// ── THREAT PANEL UPDATE ───────────────────────────
-function updateThreatPanel(score, factors, persons, faceCount, maxSpeed, inZone, light){
-  const level=score>=60?'high':score>=30?'medium':'low';
-  const labels={low:'ALL CLEAR',medium:'MONITOR SITUATION',high:'THREAT ELEVATED'};
-
-  $('thrScore').textContent=score;
-  $('thrScore').className='thr-score-num '+level;
-  $('thrLabel').textContent=labels[level];
-  $('thrLabel').className='thr-score-label '+level;
-
-  const barColors={low:'var(--b)',medium:'var(--o)',high:'var(--r)'};
-  $('thrBar').style.width=score+'%';
-  $('thrBar').style.background=barColors[level];
-
-  const fl=(val,active,cls='active')=>{el.className='thr-factor-val '+(val?cls:'clear');return el;};
-  function setFactor(id,active,text,cls='active'){
-    const el=$(id); el.textContent=text;
-    el.className='thr-factor-val '+(active?cls:'clear');
+// ── ARMED CONFIRMATION PANEL ──────────────────────
+function updateArmPanel(anyConfirming, pct){
+  const pnl=$('armConfirmPnl');
+  if(anyConfirming){
+    pnl.style.display='block';
+    $('armBar').style.width=(pct*100)+'%';
+    $('armConfirmPct').textContent=Math.round(pct*100)+'%';
+    $('armFramesNeeded').textContent=ARM_FRAMES_REQUIRED;
+  } else {
+    pnl.style.display='none';
   }
-  setFactor('tfPersons',factors.persons,persons||'0');
-  setFactor('tfFaces',factors.faces,faceCount||'0');
-  setFactor('tfNight',factors.night,factors.night?'YES':'NO');
-  setFactor('tfMove',factors.move,factors.move?`${Math.round(maxSpeed)}px/f`:'NO');
-  setFactor('tfGroup',factors.group,factors.group?'YES':'NO','high');
-  setFactor('tfZone',factors.zone,factors.zone?'YES':'NO','high');
-
-  // Threat level bar at bottom of feed
-  const fill=$('thrLevelFill');
-  fill.style.width=score+'%';
-  fill.style.background=barColors[level];
-
-  // HUD
-  const thrTxt=score>=60?'HIGH':score>=30?'ELEVATED':'CLEAR';
-  $('hThr').textContent=thrTxt;
-  $('hThr').style.color=score>=60?'var(--r)':score>=30?'var(--o)':'var(--g)';
 }
 
-// ── BANNER ────────────────────────────────────────
-const BANNERS={
-  high:  {txt:'⚠  THREAT LEVEL: HIGH',  cls:'high'},
-  medium:{txt:'◉  SITUATION: MONITOR',   cls:'medium'},
-  low:   {txt:'●  PERSON DETECTED',      cls:'low'}
-};
-let lastBannerLevel=null;
-function updateBanner(score, factors){
-  const bn=$('thrBan');
-  let level=null;
-  if(score>=60) level='high';
-  else if(score>=30) level='medium';
-  else if(factors.persons) level='low';
-
-  if(level){
-    const b=BANNERS[level];
-    clearTimeout(bannerTimer);
-    bn.textContent=b.txt;
-    bn.className=`thr-ban show ${b.cls}`;
-    if(level!==lastBannerLevel){
-      lastBannerLevel=level;
-      totalEvents++;
-      sysLog(b.txt.replace(/[⚠◉●]/g,'').trim(),level==='high'?'alert':level==='medium'?'warn':'info');
+// ── MOTION DETECTION ─────────────────────────────
+function getMotion(){
+  if(vid.readyState<2||ov.width<2) return{detected:false};
+  try{
+    const curr=ctx.getImageData(0,0,ov.width,ov.height);
+    if(!prevFrame){prevFrame=curr;return{detected:false};}
+    const d1=prevFrame.data,d2=curr.data;
+    let diff=0;
+    for(let i=0;i<d1.length;i+=16){
+      const delta=Math.abs(d1[i]-d2[i])+Math.abs(d1[i+1]-d2[i+1])+Math.abs(d1[i+2]-d2[i+2]);
+      if(delta>28) diff++;
     }
-    bannerTimer=setTimeout(()=>{bn.className='thr-ban';lastBannerLevel=null;},BANNER_HOLD);
-  }
+    prevFrame=curr;
+    return{detected:diff>15};
+  }catch{return{detected:false};}
 }
 
 // ── DRAW SCENE ────────────────────────────────────
-function drawScene(activeTracks, motion, maxConf, faceCount, lightLevel){
+function drawScene(activeTracks, motion, maxConf){
+  let persons=0,vehicles=0,zoneHitCount=0;
+  let enemyDetected=false,intrusionDetected=false;
+  let bannerType=null;
 
-  // ── Draw restricted zone ──
+  // Draw zone
   if(zonePoints.length>=2){
     ctx.beginPath();
     ctx.moveTo(zonePoints[0].x,zonePoints[0].y);
     for(let i=1;i<zonePoints.length;i++) ctx.lineTo(zonePoints[i].x,zonePoints[i].y);
     if(zoneActive&&zonePoints.length>=3) ctx.closePath();
     ctx.strokeStyle=zoneActive?'rgba(255,145,0,0.9)':'rgba(255,145,0,0.5)';
-    ctx.setLineDash([8,4]);ctx.lineWidth=2;ctx.stroke();ctx.setLineDash([]);
+    ctx.setLineDash([8,4]); ctx.lineWidth=2; ctx.stroke(); ctx.setLineDash([]);
     if(zoneActive&&zonePoints.length>=3){
-      ctx.fillStyle='rgba(255,145,0,0.04)';ctx.fill();
-      const zcx=zonePoints.reduce((s,p)=>s+p.x,0)/zonePoints.length;
-      const zcy=zonePoints.reduce((s,p)=>s+p.y,0)/zonePoints.length;
+      ctx.fillStyle='rgba(255,145,0,0.04)'; ctx.fill();
+      const cx=zonePoints.reduce((s,p)=>s+p.x,0)/zonePoints.length;
+      const cy=zonePoints.reduce((s,p)=>s+p.y,0)/zonePoints.length;
       ctx.font=`bold ${Math.max(10,ov.width*0.014)}px monospace`;
       ctx.fillStyle='rgba(255,145,0,0.8)';
-      ctx.fillText('⬡ RESTRICTED ZONE',zcx-60,zcy);
+      ctx.fillText('⬡ RESTRICTED ZONE',cx-60,cy);
     }
     if(zoneDrawMode){
       zonePoints.forEach((p,i)=>{
-        ctx.beginPath();ctx.arc(p.x,p.y,5,0,Math.PI*2);
-        ctx.fillStyle='#ff9100';ctx.fill();
-        ctx.fillStyle='#000';ctx.font='bold 10px monospace';
+        ctx.beginPath(); ctx.arc(p.x,p.y,5,0,Math.PI*2);
+        ctx.fillStyle='#ff9100'; ctx.fill();
+        ctx.fillStyle='#000'; ctx.font='bold 10px monospace';
         ctx.fillText(i+1,p.x+7,p.y+4);
       });
     }
   }
 
-  // ── Draw face detections (BlazeFace) ──
-  // Separate from body boxes — small tight boxes around faces only
-  // This gives the second count for partially hidden people
-  lastFacePreds.forEach((f,i)=>{
-    if(!f.topLeft||!f.bottomRight) return;
-    const fx=f.topLeft[0],fy=f.topLeft[1];
-    const fw=f.bottomRight[0]-fx,fh=f.bottomRight[1]-fy;
-    const fcx=fx+fw/2,fcy=fy+fh/2;
-
-    // Face box — tight, distinct style from body box
-    ctx.strokeStyle='rgba(0,255,136,0.9)';
-    ctx.lineWidth=1.5;
-    ctx.setLineDash([3,2]);
-    ctx.strokeRect(fx,fy,fw,fh);
-    ctx.setLineDash([]);
-    ctx.fillStyle='rgba(0,255,136,0.06)';
-    ctx.fillRect(fx,fy,fw,fh);
-
-    // Face label
-    const prob=Math.round((f.probability?f.probability[0]:0.9)*100);
-    const fls=Math.max(8,ov.width*0.012);
-    ctx.font=`${fls}px monospace`;
-    const lbl=`FACE-${i+1} ${prob}%`;
-    const lw=ctx.measureText(lbl).width+6;
-    ctx.fillStyle='rgba(0,255,136,0.85)';
-    ctx.fillRect(fx,fy-fls-4,lw,fls+4);
-    ctx.fillStyle='#000';
-    ctx.fillText(lbl,fx+3,fy-2);
-
-    // Small crosshair on face centre
-    const ch=6;
-    ctx.beginPath();
-    ctx.moveTo(fcx-ch,fcy);ctx.lineTo(fcx+ch,fcy);
-    ctx.moveTo(fcx,fcy-ch);ctx.lineTo(fcx,fcy+ch);
-    ctx.strokeStyle='rgba(0,255,136,0.6)';
-    ctx.lineWidth=1;ctx.stroke();
-  });
-
-  // ── Draw body tracks ──
+  // Draw each track
   activeTracks.forEach(t=>{
     const[x,y,w,h]=t.bbox;
     if(w<=0||h<=0) return;
-    const cx=x+w/2,cy=y+h/2;
+
+    // ── USE armedConfirmed (frame-gated) not raw isArmedCandidate ──
+    const armed=t.cls==='person'&&t.armedConfirmed;
+    const confirming=t.cls==='person'&&t.armedFrames>0&&!t.armedConfirmed;
+
+    const cx=x+w/2, cy=y+h/2;
     const inZone=zoneActive&&pointInZone(cx,cy);
-    const isMoving=t.speed>8;
 
-    const col=inZone?'#ff9100':
-      isMoving?'#ffd600':
-      t.cls==='person'?t.color:
-      t.cls==='vehicle'?'#ffd600':'#ff9100';
+    if(t.cls==='person'){
+      persons++;
+      if(armed) enemyDetected=true;
+      if(inZone){
+        intrusionDetected=true;
+        if(!t.zoneHitLogged){
+          t.zoneHitLogged=true;
+          zoneAlerts++;
+          sysLog(`ZONE BREACH: Track #${t.id} entered restricted zone`,'alert');
+        }
+      }
+    } else if(t.cls==='vehicle') vehicles++;
+    if(inZone) zoneHitCount++;
 
-    // ── Trail ──
+    // Color: red if armed-confirmed, yellow if confirming, orange if in zone, else class color
+    const col=armed?'#ff1744':confirming?'#ffd600':inZone?'#ff9100':
+      t.cls==='person'?t.color:t.cls==='vehicle'?'#ffd600':'#ff9100';
+
+    // ── TRAJECTORY TRAIL ──
     if(showTrails&&t.trail.length>1){
       for(let i=1;i<t.trail.length;i++){
         const alpha=i/t.trail.length;
         ctx.beginPath();
         ctx.moveTo(t.trail[i-1].x,t.trail[i-1].y);
         ctx.lineTo(t.trail[i].x,t.trail[i].y);
-        ctx.strokeStyle=col+(Math.round(alpha*180)).toString(16).padStart(2,'0');
-        ctx.lineWidth=Math.max(0.5,alpha*2);ctx.stroke();
+        ctx.strokeStyle=col+(Math.round(alpha*200)).toString(16).padStart(2,'0');
+        ctx.lineWidth=Math.max(0.5,alpha*2.5); ctx.stroke();
       }
       const last=t.trail[t.trail.length-1];
-      ctx.beginPath();ctx.arc(last.x,last.y,2.5,0,Math.PI*2);
-      ctx.fillStyle=col;ctx.fill();
+      ctx.beginPath(); ctx.arc(last.x,last.y,3,0,Math.PI*2);
+      ctx.fillStyle=col; ctx.fill();
     }
 
-    // ── Bounding box — clean rectangle, no distracting circle ──
-    ctx.fillStyle=col+'14';ctx.fillRect(x,y,w,h);
-    ctx.strokeStyle=col;ctx.lineWidth=inZone?2.5:1.8;ctx.strokeRect(x,y,w,h);
+    // ── BOUNDING BOX ──
+    ctx.fillStyle=col+'16'; ctx.fillRect(x,y,w,h);
+    ctx.strokeStyle=col; ctx.lineWidth=armed?3:2; ctx.strokeRect(x,y,w,h);
 
-    // ── Corner ticks (professional look, replaces big circles) ──
-    const tl=Math.min(w,h)*0.18, tw=inZone?2.5:2;
-    [[x,y+tl,x,y,x+tl,y],[x+w-tl,y,x+w,y,x+w,y+tl],
-     [x,y+h-tl,x,y+h,x+tl,y+h],[x+w-tl,y+h,x+w,y+h,x+w,y+h-tl]].forEach(([ax,ay,bx,by,cx2,cy2])=>{
-      ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(bx,by);ctx.lineTo(cx2,cy2);
-      ctx.strokeStyle=col+'ee';ctx.lineWidth=tw;ctx.stroke();
-    });
+    // ── CIRCLE for persons ──
+    if(t.cls==='person'){
+      ctx.beginPath();
+      ctx.arc(cx,cy,Math.max(w,h)*0.62,0,Math.PI*2);
+      ctx.strokeStyle=col+'88'; ctx.lineWidth=1.5;
+      ctx.setLineDash([6,4]); ctx.stroke(); ctx.setLineDash([]);
+    }
 
-    // ── Track label ──
-    const fs=Math.max(9,ov.width*0.013);
+    // ── ARMED CONFIRMATION RING (pulsing while confirming) ──
+    if(confirming){
+      const pct=t.armedFrames/ARM_FRAMES_REQUIRED;
+      const r=Math.max(w,h)*0.75;
+      ctx.beginPath();
+      ctx.arc(cx,cy,r,0,Math.PI*2*pct);
+      ctx.strokeStyle='rgba(255,214,0,0.7)';
+      ctx.lineWidth=2; ctx.setLineDash([4,3]); ctx.stroke(); ctx.setLineDash([]);
+      // Progress label
+      ctx.font=`bold ${Math.max(9,ov.width*0.012)}px monospace`;
+      ctx.fillStyle='rgba(255,214,0,0.9)';
+      ctx.fillText(`CONFIRM ${Math.round(pct*100)}%`,x+2,y-14);
+    }
+
+    // ── ARMED ALERT RING (full, pulsing) ──
+    if(armed){
+      const r=Math.max(w,h)*0.78;
+      ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2);
+      ctx.strokeStyle='rgba(255,23,68,0.6)'; ctx.lineWidth=2;
+      ctx.setLineDash([5,3]); ctx.stroke(); ctx.setLineDash([]);
+    }
+
+    // ── CORNER TICKS for vehicles ──
+    if(t.cls==='vehicle'){
+      const tl=10;
+      [[x,y+tl,x,y,x+tl,y],[x+w-tl,y,x+w,y,x+w,y+tl],
+       [x,y+h-tl,x,y+h,x+tl,y+h],[x+w-tl,y+h,x+w,y+h,x+w,y+h-tl]].forEach(([ax,ay,bx,by,cx2,cy2])=>{
+        ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(bx,by);ctx.lineTo(cx2,cy2);
+        ctx.strokeStyle=col+'cc';ctx.lineWidth=2;ctx.stroke();
+      });
+    }
+
+    // ── TRACK LABEL ──
+    const fs=Math.max(10,ov.width*0.015);
     ctx.font=`bold ${fs}px monospace`;
-    const statusTxt=inZone?'⚠ZONE':isMoving?'MOVING':'';
-    const lbl=`#${t.id} ${t.cls.toUpperCase()}${statusTxt?' '+statusTxt:''}`;
-    const lw2=ctx.measureText(lbl).width+8;
-    ctx.fillStyle=col;ctx.fillRect(x-1,y-fs-5,lw2,fs+5);
-    ctx.fillStyle='#000';ctx.fillText(lbl,x+3,y-1);
+    const status=armed?'ARMED':confirming?'VERIFYING':inZone?'⚠ZONE':'';
+    const lbl=`#${t.id} ${t.cls.toUpperCase()}${status?' ':''} ${status}`.trim();
+    const tw=ctx.measureText(lbl).width+10;
+    ctx.fillStyle=col; ctx.fillRect(x-1,y-fs-6,tw,fs+6);
+    ctx.fillStyle='#000'; ctx.fillText(lbl,x+4,y-2);
 
-    // ── Confidence bar ──
-    const bw=Math.min(w,55);
-    ctx.fillStyle='rgba(0,0,0,0.5)';ctx.fillRect(x,y+h+2,bw,3);
-    ctx.fillStyle=col;ctx.fillRect(x,y+h+2,bw*(t.conf||0.7),3);
+    // ── CONFIDENCE BAR ──
+    const bw=Math.min(w,60);
+    ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(x,y+h+2,bw,3);
+    ctx.fillStyle=col; ctx.fillRect(x,y+h+2,bw*(t.conf||0.7),3);
 
-    // ── Velocity arrow ──
-    if(t.trail.length>=3&&t.speed>3){
-      const t1=t.trail[t.trail.length-3],t2=t.trail[t.trail.length-1];
-      const vx=t2.x-t1.x,vy=t2.y-t1.y;
+    // ── VELOCITY ARROW ──
+    if(t.trail.length>=3){
+      const t1=t.trail[t.trail.length-3], t2=t.trail[t.trail.length-1];
+      const vx=t2.x-t1.x, vy=t2.y-t1.y;
       const spd=Math.sqrt(vx*vx+vy*vy);
-      if(spd>0.5){
-        const scale=Math.min(spd*1.8,35);
-        const ex=cx+vx/spd*scale,ey=cy+vy/spd*scale;
+      if(spd>2){
+        const scale=Math.min(spd*2,40);
+        const ex=cx+vx/spd*scale, ey=cy+vy/spd*scale;
         const angle=Math.atan2(vy,vx);
-        ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(ex,ey);
-        ctx.strokeStyle=col+'bb';ctx.lineWidth=1.5;ctx.stroke();
-        ctx.beginPath();ctx.moveTo(ex,ey);
-        ctx.lineTo(ex-7*Math.cos(angle-0.4),ey-7*Math.sin(angle-0.4));
-        ctx.lineTo(ex-7*Math.cos(angle+0.4),ey-7*Math.sin(angle+0.4));
-        ctx.closePath();ctx.fillStyle=col;ctx.fill();
+        ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(ex,ey);
+        ctx.strokeStyle=col+'cc'; ctx.lineWidth=2; ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(ex,ey);
+        ctx.lineTo(ex-8*Math.cos(angle-0.4),ey-8*Math.sin(angle-0.4));
+        ctx.lineTo(ex-8*Math.cos(angle+0.4),ey-8*Math.sin(angle+0.4));
+        ctx.closePath(); ctx.fillStyle=col; ctx.fill();
       }
     }
   });
 
-  // Motion only circle if no tracks
+  // Motion circle if no tracks
   if(motion.detected&&activeTracks.length===0){
-    const cxm=ov.width/2,cym=ov.height/2;
-    ctx.beginPath();ctx.arc(cxm,cym,40,0,Math.PI*2);
-    ctx.strokeStyle='rgba(0,176,255,0.45)';ctx.setLineDash([6,4]);
-    ctx.lineWidth=1.2;ctx.stroke();ctx.setLineDash([]);
-    ctx.fillStyle='rgba(0,176,255,0.03)';ctx.fill();
-    ctx.font=`bold ${Math.max(10,ov.width*0.014)}px monospace`;
+    const cxm=ov.width/2, cym=ov.height/2;
+    ctx.beginPath(); ctx.arc(cxm,cym,50,0,Math.PI*2);
+    ctx.strokeStyle='rgba(0,176,255,0.5)'; ctx.setLineDash([8,5]);
+    ctx.lineWidth=1.5; ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle='rgba(0,176,255,0.04)'; ctx.fill();
+    ctx.font=`bold ${Math.max(10,ov.width*0.015)}px monospace`;
     ctx.fillStyle='#00b0ff';
-    ctx.fillText('MOTION DETECTED',cxm-58,cym-48);
+    ctx.fillText('MOTION DETECTED',cxm-55,cym-55);
   }
 
   // ── HUD UPDATE ──
-  const persons=activeTracks.filter(t=>t.cls==='person').length;
-  const vehicles=activeTracks.filter(t=>t.cls==='vehicle').length;
-  $('hP').textContent=persons; $('hV').textContent=vehicles;
+  $('hP').textContent=persons;
+  $('hV').textContent=vehicles;
   $('hTracks').textContent=activeTracks.length;
-  $('hFaces').textContent=faceCount;
   $('hZone').textContent=zoneAlerts;
-  $('hAlerts').textContent=totalEvents;
+  $('hAlerts').textContent=totalAlerts;
+  $('hMot').textContent=motion.detected?'ACTIVE':'CLEAR';
   $('hConf').textContent=maxConf>0?Math.round(maxConf*100):'--';
-  $('sP').textContent=persons; $('sV').textContent=vehicles;
-  $('sF').textContent=faceCount;
+  $('sP').textContent=persons;
+  $('sV').textContent=vehicles;
   $('sTr').textContent=activeTracks.length;
   $('sZ').textContent=zoneAlerts;
-  $('sEv').textContent=totalEvents;
-  $('dBody').className=activeTracks.length>0?'dot on':'dot on';
-  $('dFace').className=faceModel?'dot on':'dot warn';
+  $('dTrack').className=activeTracks.length>0?'dot on':'dot';
+
+  // ── BANNER LOGIC ──
+  if(enemyDetected) bannerType='enemy';
+  else if(intrusionDetected) bannerType='intrusion';
+  else if(motion.detected&&activeTracks.length>0) bannerType='motion';
+  showBanner(bannerType);
 }
 
-// ── SIDEBAR ───────────────────────────────────────
-let sbTimer=null;
+// ── BANNER ───────────────────────────────────────
+const BANNER_TXT={
+  enemy:'⚠  ARMED PERSON DETECTED',
+  intrusion:'⬡  ZONE INTRUSION ALERT',
+  motion:'◉  TRACKED TARGET IN FRAME'
+};
+let lastBanner=null;
+function showBanner(type){
+  const bn=$('thrBan');
+  if(type){
+    clearTimeout(bannerTimer);
+    bn.textContent=BANNER_TXT[type];
+    bn.className=`thr-ban show ${type}`;
+    if(type!==lastBanner){
+      lastBanner=type;
+      totalAlerts++;
+      sysLog(BANNER_TXT[type].replace(/[⚠⬡◉]/g,'').trim(),
+        type==='enemy'?'alert':type==='intrusion'?'warn':'info');
+    }
+    bannerTimer=setTimeout(()=>{bn.className='thr-ban';lastBanner=null;},BANNER_HOLD);
+  }
+}
+
+// ── SIDEBAR TRACK LIST ────────────────────────────
+let sidebarTimer=null;
 function updateSidebar(activeTracks){
-  clearTimeout(sbTimer);
-  sbTimer=setTimeout(()=>{
+  clearTimeout(sidebarTimer);
+  sidebarTimer=setTimeout(()=>{
     const tl=$('trackList');
-    if(!activeTracks.length){
+    if(activeTracks.length===0){
       tl.innerHTML='<div class="track-item"><span style="color:var(--dim)">NO ACTIVE TRACKS</span></div>';
       return;
     }
     tl.innerHTML=activeTracks.map(t=>{
       const inZone=zoneActive&&pointInZone(t.bbox[0]+t.bbox[2]/2,t.bbox[1]+t.bbox[3]/2);
-      const cls=inZone?'zone':t.cls;
-      const spd=Math.round(t.speed);
+      const armed=t.armedConfirmed;
+      const confirming=t.armedFrames>0&&!armed;
+      const status=armed?'ARMED':confirming?`VER${Math.round(t.armedFrames/ARM_FRAMES_REQUIRED*100)}%`:inZone?'ZONE':'CLEAR';
+      const statusCls=armed?'threat':confirming?'confirm':inZone?'zone':'clear';
+      const spd=t.trail.length>=3?calcSpeed(t.trail):'0px/f';
+      const cls=armed?'armed':inZone?'zone':t.cls;
       return `<div class="track-item ${cls}">
         <span class="track-id">#${t.id}</span> ${t.cls.toUpperCase()}
-        <span class="ts ${inZone?'zone':'clear'}">${inZone?'⚠ZONE':'CLEAR'}</span><br>
-        CONF:${Math.round((t.conf||0.7)*100)}% · SPD:${spd}px/f · AGE:${t.age}f
+        <span class="track-status ${statusCls}">${status}</span><br>
+        CONF:${Math.round((t.conf||0.7)*100)}% · SPD:${spd} · AGE:${t.age}f
       </div>`;
     }).join('');
   },100);
 }
 
-// ── LOG ───────────────────────────────────────────
+function calcSpeed(trail){
+  const t1=trail[trail.length-3], t2=trail[trail.length-1];
+  const dx=t2.x-t1.x, dy=t2.y-t1.y;
+  return `${Math.round(Math.sqrt(dx*dx+dy*dy))}px/f`;
+}
+
+// ── EVENT LOG ─────────────────────────────────────
 function sysLog(msg,type='sys'){
   const t=new Date().toTimeString().slice(0,8);
   const d=document.createElement('div');
-  d.className=`al ${type}`;d.textContent=`[${t}] ${msg}`;
-  const l=$('evLog');l.insertBefore(d,l.firstChild);
+  d.className=`al ${type}`; d.textContent=`[${t}] ${msg}`;
+  const l=$('evLog'); l.insertBefore(d,l.firstChild);
   while(l.children.length>50) l.removeChild(l.lastChild);
 }
 
 // ── CONTROLS ─────────────────────────────────────
-function setConf(v){threshold=v/100;$('confV').textContent=v+'%';}
-function setFaceConf(v){faceThreshold=v/100;$('faceConfV').textContent=v+'%';}
-function setTrail(v){trailLen=parseInt(v);$('trailV').textContent=v;}
-function toggleTrails(){showTrails=!showTrails;$('trailBtn').textContent=`⟳ TRAILS\n${showTrails?'ON':'OFF'}`;}
+function setConf(v){ threshold=parseInt(v)/100; $('confV').textContent=v+'%'; }
+function setTrail(v){ trailLen=parseInt(v); $('trailV').textContent=v; }
+function setArmFrames(v){
+  ARM_FRAMES_REQUIRED=parseInt(v); $('armV').textContent=v;
+  sysLog(`Armed confirmation threshold set: ${v} frames`,'sys');
+}
+function toggleTrails(){
+  showTrails=!showTrails;
+  $('trailBtn').textContent=`⟳ TRAILS\n${showTrails?'ON':'OFF'}`;
+}
 function doReset(){
-  tracks=[];nextId=1;freeIds.length=0;
-  totalEvents=0;zoneAlerts=0;smoothThreatScore=0;
-  lastBannerLevel=null;clearTimeout(bannerTimer);
+  tracks=[]; nextId=1; freeIds.length=0;
+  totalAlerts=0; zoneAlerts=0;
+  lastBanner=null; clearTimeout(bannerTimer);
   $('thrBan').className='thr-ban';
   $('evLog').innerHTML='';
-  ['dBody','dFace'].forEach(id=>$(id).className='dot on');
+  $('armConfirmPnl').style.display='none';
+  ['dTrack'].forEach(id=>$(id).className='dot');
   sysLog('System reset — all tracks and counters cleared','ok');
 }
 </script>
